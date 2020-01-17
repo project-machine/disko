@@ -169,6 +169,7 @@ type DiskSetByType map[DiskType]DiskSet
 // and group them by their type.
 func MakeDiskSetByType(allDisks DiskSet) DiskSetByType {
 	disksByType := make(DiskSetByType)
+
 	for n, d := range allDisks {
 		if tset, ok := disksByType[d.Type()]; ok {
 			tset[n] = d
@@ -178,6 +179,7 @@ func MakeDiskSetByType(allDisks DiskSet) DiskSetByType {
 			disksByType[d.Type()] = tset
 		}
 	}
+
 	return disksByType
 }
 

@@ -46,5 +46,4 @@ func CreateVG(name string, pvs ...PV) (VG, error) {
 // ScanVGs returns a set of all the VGs on the system.
 func ScanVGs() (VGSet, error) {
 	return nil, nil
-
 }
