@@ -1,2 +1,2 @@
-// Write package level go doc
+// Package disko - xxx
 package disko
