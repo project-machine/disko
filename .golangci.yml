@@ -1,0 +1,14 @@
+linters-settings:
+  wsl:
+    allow-cuddle-declarations: true
+  funlen:
+    lines: 80
+    statements: 60
+
+issues:
+  exclude-rules:
+    - linters: ["gocritic"]
+      text: "ifElseChain:"
+    # 1 is not a magic number. 3 is a magic number.
+    - linters: ["gomnd"]
+      text: "Magic number: 1,"
