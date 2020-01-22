@@ -3,6 +3,9 @@ package disko
 // LVSet is a map of LV names to the LV.
 type LVSet map[string]LV
 
+// ExtentSize is extent size for lvm
+const ExtentSize = 4 * Mebibyte
+
 // LV interface wraps the lvm logical volume information and operations. A
 // logical volume partitions a volume group into a slice of capacity that can
 // be used a block device to create a file system.
