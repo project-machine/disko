@@ -16,8 +16,7 @@ jobs:
 
     - name: Test
       run: |
-        go test -race -covermode=atomic -coverprofile cover.out ./...
-        cat cover.out >> coverage.txt
+        go test -race -covermode=atomic -coverprofile coverage.txt ./...
 
     - name: Upload Coverage report to CodeCov
       uses: codecov/codecov-action@v1.0.0
