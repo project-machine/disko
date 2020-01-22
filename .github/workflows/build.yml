@@ -23,6 +23,7 @@ jobs:
       run: cp .github/codecov-upstream.yml .codecov.yml
 
     - name: Upload Coverage report to CodeCov
+      if: success()
       uses: codecov/codecov-action@v1.0.0
       with:
         token: ${{secrets.CODECOV_TOKEN}}
