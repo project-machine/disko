@@ -18,13 +18,9 @@ jobs:
       run: |
         go test -race -covermode=atomic -coverprofile coverage.txt ./...
 
-    - name: Prepare coverage token
-      if: success() && github.repository == 'anuvu/disko'
-      run: cp .github/codecov-upstream.yml .codecov.yml
-
     - name: Upload Coverage report to CodeCov
       if: success()
       uses: codecov/codecov-action@v1.0.0
       with:
-        token: ${{secrets.CODECOV_TOKEN}}
+        token: 78b19480-8cfa-4f32-8448-b972a29a8f46
         file: ./coverage.txt

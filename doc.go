@@ -1,2 +1,2 @@
-// Package disko - xxx
+// Package disko - disk operations
 package disko
