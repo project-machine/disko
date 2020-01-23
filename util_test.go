@@ -52,7 +52,7 @@ func TestFindGaps6(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(
 		[]uRange{},
-		findRangeGaps([]uRange{{0, 150}, {50, 100}}, 0, 100))
+		findRangeGaps([]uRange{{0, 150}, {50, 100}}, 100, 100))
 }
 
 func TestFindGaps7(t *testing.T) {
@@ -69,6 +69,7 @@ func TestFindGaps8(t *testing.T) {
 		findRangeGaps([]uRange{{110, 200}}, 0, 100))
 }
 
+//nolint: lll
 func TestParseUdevInfo(t *testing.T) {
 	data := []byte(`P: /devices/virtual/block/dm-0
 N: dm-0
@@ -79,9 +80,11 @@ S: mapper/nvme0n1p6_crypt
 E: DEVLINKS=/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-b174c64e7a714359a8b56b79fb66e92b-nvme0n1p6_crypt /dev/mapper/nvme0n1p6_crypt /dev/disk/by-id/dm-name-nvme0n1p6_crypt /dev/disk/by-uuid/25df9069-80c7-46f4-a47c-305613c2cb6b
 E: DEVNAME=/dev/dm-0
 `)
-	myInfo := UdevInfo{}
-	parseUdevInfo(data, &myInfo)
 	ast := assert.New(t)
+
+	myInfo := UdevInfo{}
+	ast.Nil(parseUdevInfo(data, &myInfo))
+
 	ast.Equal(
 		UdevInfo{
 			Name:    "dm-0",

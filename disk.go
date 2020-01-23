@@ -35,7 +35,7 @@ const (
 type AttachmentType int
 
 const (
-	// UNKNOWN - indicates an unknown attachment.
+	// UnknownAttach - indicates an unknown attachment.
 	UnknownAttach = iota
 
 	// RAID - indicates that the device is attached to RAID card
