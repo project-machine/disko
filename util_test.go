@@ -65,8 +65,8 @@ func TestFindGaps7(t *testing.T) {
 func TestFindGaps8(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(
-		[]uRange{{0, 100}},
-		findRangeGaps([]uRange{{110, 200}}, 0, 100))
+		[]uRange{{10, 100}},
+		findRangeGaps([]uRange{{110, 200}}, 10, 100))
 }
 
 //nolint: lll
@@ -77,10 +77,12 @@ S: disk/by-id/dm-name-nvme0n1p6_crypt
 S: disk/by-id/dm-uuid-CRYPT-LUKS1-b174c64e7a714359a8b56b79fb66e92b-nvme0n1p6_crypt
 S: disk/by-uuid/25df9069-80c7-46f4-a47c-305613c2cb6b
 S: mapper/nvme0n1p6_crypt
-E: DEVLINKS=/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-b174c64e7a714359a8b56b79fb66e92b-nvme0n1p6_crypt /dev/mapper/nvme0n1p6_crypt /dev/disk/by-id/dm-name-nvme0n1p6_crypt /dev/disk/by-uuid/25df9069-80c7-46f4-a47c-305613c2cb6b
+E: DEVLINKS=/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-b174b-nvme0n1p6_crypt ` +
+		`/dev/mapper/nvme0n1p6_crypt /dev/disk/by-id/dm-name-nvme0n1p6_crypt
 E: DEVNAME=/dev/dm-0
 `)
-	ast := assert.New(t)
+	
+  ast := assert.New(t)
 
 	myInfo := UdevInfo{}
 	ast.Nil(parseUdevInfo(data, &myInfo))
@@ -97,8 +99,9 @@ E: DEVNAME=/dev/dm-0
 				"mapper/nvme0n1p6_crypt",
 			},
 			Properties: map[string]string{
-				"DEVLINKS": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-b174c64e7a714359a8b56b79fb66e92b-nvme0n1p6_crypt /dev/mapper/nvme0n1p6_crypt /dev/disk/by-id/dm-name-nvme0n1p6_crypt /dev/disk/by-uuid/25df9069-80c7-46f4-a47c-305613c2cb6b",
-				"DEVNAME":  "/dev/dm-0",
+				"DEVLINKS": ("/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-b174b-nvme0n1p6_crypt /dev/mapper/nvme0n1p6_crypt " +
+					"/dev/disk/by-id/dm-name-nvme0n1p6_crypt"),
+				"DEVNAME": "/dev/dm-0",
 			},
 		},
 		myInfo)
