@@ -27,13 +27,3 @@ type PV interface {
 
 // PVSet is a set of PVs indexed by their names.
 type PVSet map[string]PV
-
-// ScanPVs returns a set of all the PVs on the system.
-func ScanPVs() (PVSet, error) {
-	return nil, nil
-}
-
-// NewPV returns a PV object that can used to create a PV.
-func NewPV(name string) PV {
-	return nil
-}

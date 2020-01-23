@@ -1,8 +1,11 @@
-package disko
+// +build linux
+
+package linux
 
 import (
 	"testing"
 
+	"github.com/anuvu/disko"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -84,11 +87,11 @@ E: DEVNAME=/dev/dm-0
 
 	ast := assert.New(t)
 
-	myInfo := UdevInfo{}
+	myInfo := disko.UdevInfo{}
 	ast.Nil(parseUdevInfo(data, &myInfo))
 
 	ast.Equal(
-		UdevInfo{
+		disko.UdevInfo{
 			Name:    "dm-0",
 			SysPath: "/devices/virtual/block/dm-0",
 			Symlinks: []string{
@@ -128,11 +131,11 @@ E: TAGS=:systemd:
 E: USEC_INITIALIZED=1926114
 `)
 	ast := assert.New(t)
-	myInfo := UdevInfo{}
+	myInfo := disko.UdevInfo{}
 	err := parseUdevInfo(data, &myInfo)
 	ast.Equal(nil, err)
 	ast.Equal(
-		UdevInfo{
+		disko.UdevInfo{
 			Name:    "sda",
 			SysPath: "/devices/pci0000:00/..../block/sda",
 			Symlinks: []string{

@@ -1,4 +1,6 @@
-package disko
+// +build linux
+
+package linux
 
 import (
 	"bytes"
@@ -12,30 +14,16 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/anuvu/disko"
 	"github.com/pkg/errors"
 )
 
-// UdevInfo captures the udev information about a disk.
-type UdevInfo struct {
-	// Name of the disk
-	Name string
-
-	// SysPath is the system path of this device.
-	SysPath string
-
-	// Symlinks for the disk.
-	Symlinks []string
-
-	// Properties is udev information as a map of key, value pairs.
-	Properties map[string]string
-}
-
 // GetUdevInfo return a UdevInfo for the device with kernel name kname.
-func GetUdevInfo(kname string) (UdevInfo, error) {
+func GetUdevInfo(kname string) (disko.UdevInfo, error) {
 	out, stderr, rc := runCommandWithOutputErrorRc(
 		"udevadm", "info", "--query=all", "--export", "--name="+kname)
 
-	info := UdevInfo{Name: kname}
+	info := disko.UdevInfo{Name: kname}
 
 	if rc != 0 {
 		return info,
@@ -45,7 +33,7 @@ func GetUdevInfo(kname string) (UdevInfo, error) {
 	return info, parseUdevInfo(out, &info)
 }
 
-func parseUdevInfo(out []byte, info *UdevInfo) error {
+func parseUdevInfo(out []byte, info *disko.UdevInfo) error {
 	var toks [][]byte
 	var payload, s string
 	var err error

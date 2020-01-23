@@ -37,13 +37,3 @@ type VGSet map[string]VG
 func (vgs VGSet) Details() string {
 	return ""
 }
-
-// CreateVG creates a volume group and returns the VG.
-func CreateVG(name string, pvs ...PV) (VG, error) {
-	return nil, nil
-}
-
-// ScanVGs returns a set of all the VGs on the system.
-func ScanVGs() (VGSet, error) {
-	return nil, nil
-}
