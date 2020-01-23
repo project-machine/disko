@@ -1,4 +1,6 @@
-package disko
+// +build linux
+
+package linux
 
 import "log"
 
