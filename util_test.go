@@ -81,8 +81,8 @@ E: DEVLINKS=/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-b174b-nvme0n1p6_crypt ` +
 		`/dev/mapper/nvme0n1p6_crypt /dev/disk/by-id/dm-name-nvme0n1p6_crypt
 E: DEVNAME=/dev/dm-0
 `)
-	
-  ast := assert.New(t)
+
+	ast := assert.New(t)
 
 	myInfo := UdevInfo{}
 	ast.Nil(parseUdevInfo(data, &myInfo))
