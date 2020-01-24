@@ -69,7 +69,7 @@ func (ls *linuxLVM) RemoveLV(lvName string) error {
 	return nil
 }
 
-func (ls *linuxLVM) ExtendLV(newSize uint64) error {
+func (ls *linuxLVM) ExtendLV(lvName string, newSize uint64) error {
 	return nil
 }
 

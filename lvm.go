@@ -51,7 +51,7 @@ type VolumeManager interface {
 	RemoveLV(lvName string) error
 
 	// ExtendLV expands the LV to the requested new size.
-	ExtendLV(newSize uint64) error
+	ExtendLV(lvName string, newSize uint64) error
 
 	// HasVG returns true if the lv exists.
 	HasLV(name string) bool
@@ -61,16 +61,16 @@ type VolumeManager interface {
 // block device or other disk like devices that provide storage capacity.
 type PV struct {
 	// Name returns the name of the PV.
-	Name string ``
+	Name string `json:"name"`
 
 	// Path returns the device path of the PV.
-	Path string
+	Path string `json:"path"`
 
 	// Size returns the size of the PV.
-	Size uint64
+	Size uint64 `json:"size"`
 
 	// FreeSize returns the free size of the PV.
-	FreeSize uint64
+	FreeSize uint64 `json:"freeSize"`
 }
 
 // PVSet is a set of PVs indexed by their names.
@@ -115,16 +115,19 @@ const (
 // with combined storage capacity of the underlying physical volumes.
 type VG struct {
 	// Name is the name of the volume group.
-	Name string
+	Name string `json:"name"`
 
 	// Size is the current size of the volume group.
-	Size uint64
+	Size uint64 `json:"size"`
 
 	// Volumes is set of all the volumes in this volume group.
-	Volumes LVSet
+	Volumes LVSet `json:"volumes"`
 
 	// FreeSpace is the amount free space left in the volume group.
-	FreeSpace uint64
+	FreeSpace uint64 `json:"freeSpace"`
+
+	// PVs is the set of PVs that belongs to this VG.
+	PVs PVSet `json:"pvs"`
 }
 
 // VGSet is set of volume groups indexed by their name.
