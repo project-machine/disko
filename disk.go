@@ -1,5 +1,7 @@
 package disko
 
+import "fmt"
+
 // DiskType enumerates supported disk types.
 type DiskType int
 
@@ -53,101 +55,150 @@ func (ds DiskSet) Details() string {
 	return ""
 }
 
-// Disk interface wraps the disk level operations. It provides basic information
-// about the disk including name, device path, size etc. Operations include
-// creation and deletion of partitions and wiping the disk clean.
-type Disk interface {
-	// Name returns the kernel name of the disk.
-	Name() string
+// Disk wraps the disk level operations. It provides basic information
+// about the disk including name, device path, size etc.
+type Disk struct {
+	// Name is the kernel name of the disk.
+	Name string `json:"name"`
 
-	// Path returns the device path of the disk.
-	Path() string
+	// Path is the device path of the disk.
+	Path string `json:"path"`
 
-	// Size returns the size of the disk in bytes.
-	Size() uint64
+	// Size is the size of the disk in bytes.
+	Size uint64 `json:"size"`
 
-	// SectorSize return the sector size of the device, if its unknown or not
+	// SectorSize is the sector size of the device, if its unknown or not
 	// applicable it will return 0.
-	SectorSize() uint
+	SectorSize uint `json:"sectorSize"`
 
-	// FreeSpace returns the slots of free spaces on the disk. These slots can
+	// FreeSpaces is a list of slots of free spaces on the disk. These slots can
 	// be used to create new partitions.
-	FreeSpace() []FreeSpace
+	FreeSpaces []FreeSpace `json:"freeSpace"`
 
-	// Type returns the DiskType indicating the type of this disk. This method
+	// Type is the DiskType indicating the type of this disk. This value
 	// can be used to determine if the disk is of a particular media type like
 	// HDD, SSD or NVMe.
-	Type() DiskType
+	Type DiskType `json:"type"`
 
-	// Attachment returns the type of storage card this disk is attached to.
+	// Attachment is the type of storage card this disk is attached to.
 	// For example: RAID, ATA or PCIE.
-	Attachment() AttachmentType
+	Attachment AttachmentType `json:"attachment"`
 
-	// Partitions returns the set of partitions on this disk.
-	Partitions() PartitionSet
+	// Partitions is the set of partitions on this disk.
+	Partitions PartitionSet `json:"partitions"`
 
-	// UdevInfo returns the disk's udev information.
-	UdevInfo() UdevInfo
+	// UdevInfo is the disk's udev information.
+	UdevInfo UdevInfo `json:"udevInfo"`
+}
 
-	// CreatePartition creates a partition on the is disk with the specified
-	// partition number, type and disk offsets.
-	CreatePartition(Partition) error
+func (d Disk) String() string {
+	var avail uint64 = 0
 
-	// DeletePartition deletes the specified partition.
-	DeletePartition(int) error
+	fs := d.FreeSpaces
 
-	// Wipe wipes the disk to make it a clean disk. All partitions and data
-	// on the disk will be lost.
-	Wipe() error
+	for _, f := range d.FreeSpaces {
+		avail += f.Size()
+	}
+
+	mbsize := func(n uint64) string {
+		if (n)%Mebibyte == 0 {
+			return fmt.Sprintf("%dMiB", (n)/Mebibyte)
+		}
+
+		return fmt.Sprintf("%d", n)
+	}
+
+	return fmt.Sprintf(
+		"%s (%s) Size=%s NumParts=%d FreeSpace=%s/%d, SectorSize=%d Attachment=%s Type=%s",
+		d.Name, d.Path, mbsize(d.Size), len(d.Partitions),
+		mbsize(avail), len(fs), d.SectorSize,
+		string(d.Attachment), string(d.Type))
+}
+
+// Details returns the disk details as a table formatted string.
+func (d Disk) Details() string {
+	fss := d.FreeSpaces
+	var fsn int = 0
+
+	mbsize := func(n, o uint64) string {
+		if (n+o)%Mebibyte == 0 {
+			return fmt.Sprintf("%d MiB", (n+o)/Mebibyte)
+		}
+
+		return fmt.Sprintf("%d", n)
+	}
+
+	mbo := func(n uint64) string { return mbsize(n, 0) }
+	mbe := func(n uint64) string { return mbsize(n, 1) }
+	lfmt := "[%2s  %10s %10s %10s %-16s]\n"
+	buf := fmt.Sprintf(lfmt, "#", "Start", "End", "Size", "Name")
+
+	for _, p := range d.Partitions {
+		if fsn < len(fss) && fss[fsn].Start < p.Start {
+			buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].End), mbo(fss[fsn].Size()), "<free>")
+			fsn++
+		}
+
+		buf += fmt.Sprintf(lfmt,
+			fmt.Sprintf("%d", p.Number), mbo(p.Start), mbe(p.End), mbo(p.Size()), p.Name)
+	}
+
+	if fsn < len(fss) {
+		buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].End), mbo(fss[fsn].Size()), "<free>")
+	}
+
+	return buf
 }
 
 // UdevInfo captures the udev information about a disk.
 type UdevInfo struct {
 	// Name of the disk
-	Name string
+	Name string `json:"name"`
 
 	// SysPath is the system path of this device.
-	SysPath string
+	SysPath string `json:"sysPath"`
 
 	// Symlinks for the disk.
-	Symlinks []string
+	Symlinks []string `json:"symLinks"`
 
 	// Properties is udev information as a map of key, value pairs.
-	Properties map[string]string
+	Properties map[string]string `json:"properties"`
 }
 
 // PartitionSet is a map of partition number to the partition.
 type PartitionSet map[uint]Partition
 
-// Partition interface wraps the disk partition information.
-type Partition interface {
-	// Start returns the start offset of the disk partition.
-	Start() uint64
+// Partition wraps the disk partition information.
+type Partition struct {
+	// Start is the start offset of the disk partition.
+	Start uint64 `json:"start"`
 
-	// End returns the end offset of the disk partition.
-	End() uint64
+	// End is the end offset of the disk partition.
+	End uint64 `json:"end"`
 
-	// Id returns the partition id.
-	ID() string
+	// ID is the partition id.
+	ID string `json:"id"`
 
-	// Type returns the partition type.
-	Type() string
+	// Type is the partition type.
+	Type string `json:"type"`
 
-	// Name returns the name of this partition.
-	Name() string
+	// Name is the name of this partition.
+	Name string `json:"name"`
 
-	// Number returns the number of this partition.
-	Number() uint
+	// Number is the number of this partition.
+	Number uint `json:"number"`
+}
 
-	// Size returns the size of this partition.
-	Size() uint64
+// Size returns the size of the partition in bytes.
+func (p *Partition) Size() uint64 {
+	return p.End - p.Start
 }
 
 // FreeSpace indicates a free slot on the disk with a Start and End offset,
 // where a partition can be craeted.
 type FreeSpace struct {
-	Start uint64
-	End   uint64
+	Start uint64 `json:"start"`
+	End   uint64 `json:"end"`
 }
 
 // Size returns the size of the free space, which is End - Start.

@@ -78,7 +78,7 @@ func (ls *linuxSystem) ScanDisks(filter disko.DiskFilter,
 
 		if filter(disk) {
 			// Accepted so add to the set
-			disks[disk.Name()] = disk
+			disks[disk.Name] = disk
 		}
 	}
 
@@ -98,28 +98,28 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 	} else {
 		bss, err := getBlockDevSize(devicePath)
 		if err != nil {
-			return &diskImpl{}, nil
+			return disko.Disk{}, nil
 		}
 		ssize = uint(bss)
 	}
 
 	udInfo, err := GetUdevInfo(name)
 	if err != nil {
-		return &diskImpl{}, err
+		return disko.Disk{}, err
 	}
 
 	diskType, err := getDiskType(udInfo)
 	if err != nil {
-		return &diskImpl{}, err
+		return disko.Disk{}, err
 	}
 
-	disk := diskImpl{
-		iName:       name,
-		iPath:       devicePath,
-		iSectorSize: ssize,
-		iUdevInfo:   udInfo,
-		iType:       diskType,
-		iAttachment: getAttachType(udInfo),
+	disk := disko.Disk{
+		Name:       name,
+		Path:       devicePath,
+		SectorSize: ssize,
+		UdevInfo:   udInfo,
+		Type:       diskType,
+		Attachment: getAttachType(udInfo),
 	}
 
 	fh, err := os.Open(devicePath)
@@ -133,26 +133,39 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		return disk, err
 	}
 
-	disk.iSize = size
+	disk.Size = size
 	parts, ssize, err := findPartitions(fh)
 
 	if err == ErrNoPartitionTable {
 		return disk, nil
 	}
 
-	if ssize != disk.iSectorSize {
+	if ssize != disk.SectorSize {
 		if blockdev {
 			return disk, fmt.Errorf(
 				"disk %s has sector size %d and partition table sector size %d",
-				disk.iPath, disk.iSectorSize, ssize)
+				disk.Path, disk.SectorSize, ssize)
 		}
 
-		disk.iSectorSize = ssize
+		disk.SectorSize = ssize
 	}
 
-	disk.iPartitions = parts
+	disk.FreeSpaces = freeSpacesWithMin(disk, disko.ExtentSize)
+	disk.Partitions = parts
 
 	return disk, nil
+}
+
+func (ls *linuxSystem) CreatePartition(d disko.Disk, p disko.Partition) error {
+	return nil
+}
+
+func (ls *linuxSystem) DeletePartition(d disko.Disk, number uint) error {
+	return nil
+}
+
+func (ls *linuxSystem) Wipe(d disko.Disk) error {
+	return nil
 }
 
 // getDiskType(udInfo) return the diskType for the disk represented
@@ -264,15 +277,15 @@ func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
 			continue
 		}
 
-		part := partitionImpl{
-			iStart:  p.FirstLBA * ssize,
-			iEnd:    p.LastLBA*ssize + ssize - 1,
-			iID:     p.Id.String(),
-			iType:   p.Type.String(),
-			iName:   p.Name(),
-			iNumber: uint(n + 1),
+		part := disko.Partition{
+			Start:  p.FirstLBA * ssize,
+			End:    p.LastLBA*ssize + ssize - 1,
+			ID:     p.Id.String(),
+			Type:   p.Type.String(),
+			Name:   p.Name(),
+			Number: uint(n + 1),
 		}
-		parts[part.iNumber] = part
+		parts[part.Number] = part
 
 		if p.LastLBA > max {
 			max = p.LastLBA
@@ -285,61 +298,19 @@ func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
 // ErrNoPartitionTable is returned if there is no partition table.
 var ErrNoPartitionTable error = errors.New("no Partition Table Found")
 
-type diskImpl struct {
-	iName       string
-	iPath       string
-	iSize       uint64
-	iSectorSize uint
-	iType       disko.DiskType
-	iAttachment disko.AttachmentType
-	iPartitions disko.PartitionSet
-	iUdevInfo   disko.UdevInfo
-}
-
-func (d diskImpl) Name() string {
-	return d.iName
-}
-
-func (d diskImpl) Path() string {
-	return d.iPath
-}
-
-func (d diskImpl) Size() uint64 {
-	return d.iSize
-}
-
-func (d diskImpl) SectorSize() uint {
-	return d.iSectorSize
-}
-
-func (d diskImpl) Type() disko.DiskType {
-	return d.iType
-}
-
-func (d diskImpl) Attachment() disko.AttachmentType {
-	return d.iAttachment
-}
-
-func (d diskImpl) Partitions() disko.PartitionSet {
-	return d.iPartitions
-}
-
-func (d diskImpl) UdevInfo() disko.UdevInfo {
-	return d.iUdevInfo
-}
-
-func (d *diskImpl) FreeSpacesWithMin(minSize uint64) []disko.FreeSpace {
+func freeSpacesWithMin(d disko.Disk, minSize uint64) []disko.FreeSpace {
 	// Stay out of the first 1Mebibyte
 	// Leave 33 sectors at end (for GPT second header) and round 1MiB down.
-	end := ((d.Size() - uint64(d.SectorSize())*33) / disko.Mebibyte) * disko.Mebibyte
-	used := []uRange{{0, 1*disko.Mebibyte - 1}, {end, d.Size()}}
+	//nolint: gomnd
+	end := ((d.Size - uint64(d.SectorSize*33)/disko.Mebibyte) * disko.Mebibyte)
+	used := []uRange{{0, 1*disko.Mebibyte - 1}, {end, d.Size}}
 	avail := []disko.FreeSpace{}
 
-	for _, p := range d.Partitions() {
-		used = append(used, uRange{p.Start(), p.End()})
+	for _, p := range d.Partitions {
+		used = append(used, uRange{p.Start, p.End})
 	}
 
-	for _, g := range findRangeGaps(used, 0, d.Size()) {
+	for _, g := range findRangeGaps(used, 0, d.Size) {
 		if g.Size() < minSize {
 			continue
 		}
@@ -348,117 +319,6 @@ func (d *diskImpl) FreeSpacesWithMin(minSize uint64) []disko.FreeSpace {
 	}
 
 	return avail
-}
-
-func (d diskImpl) FreeSpace() []disko.FreeSpace {
-	return d.FreeSpacesWithMin(disko.ExtentSize)
-}
-
-func (d diskImpl) CreatePartition(part disko.Partition) error {
-	return nil
-}
-
-func (d diskImpl) DeletePartition(partNum int) error {
-	return nil
-}
-
-func (d diskImpl) Wipe() error {
-	return nil
-}
-
-func (d diskImpl) String() string {
-	var avail uint64 = 0
-
-	fs := d.FreeSpace()
-
-	for _, f := range d.FreeSpace() {
-		avail += f.Size()
-	}
-
-	mbsize := func(n uint64) string {
-		if (n)%disko.Mebibyte == 0 {
-			return fmt.Sprintf("%dMiB", (n)/disko.Mebibyte)
-		}
-
-		return fmt.Sprintf("%d", n)
-	}
-
-	return fmt.Sprintf(
-		"%s (%s) Size=%s NumParts=%d FreeSpace=%s/%d, SectorSize=%d Attachment=%s Type=%s",
-		d.iName, d.iPath, mbsize(d.iSize), len(d.iPartitions),
-		mbsize(avail), len(fs), d.iSectorSize,
-		string(d.iAttachment), string(d.iType))
-}
-
-func (d diskImpl) Details() string {
-	fss := d.FreeSpace()
-	var fsn int = 0
-
-	mbsize := func(n, o uint64) string {
-		if (n+o)%disko.Mebibyte == 0 {
-			return fmt.Sprintf("%d MiB", (n+o)/disko.Mebibyte)
-		}
-
-		return fmt.Sprintf("%d", n)
-	}
-
-	mbo := func(n uint64) string { return mbsize(n, 0) }
-	mbe := func(n uint64) string { return mbsize(n, 1) }
-	lfmt := "[%2s  %10s %10s %10s %-16s]\n"
-	buf := fmt.Sprintf(lfmt, "#", "Start", "End", "Size", "Name")
-
-	for _, p := range d.Partitions() {
-		if fsn < len(fss) && fss[fsn].Start < p.Start() {
-			buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].End), mbo(fss[fsn].Size()), "<free>")
-			fsn++
-		}
-
-		buf += fmt.Sprintf(lfmt,
-			fmt.Sprintf("%d", p.Number()), mbo(p.Start()), mbe(p.End()), mbo(p.Size()), p.Name())
-	}
-
-	if fsn < len(fss) {
-		buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].End), mbo(fss[fsn].Size()), "<free>")
-	}
-
-	return buf
-}
-
-type partitionImpl struct {
-	iStart  uint64
-	iEnd    uint64
-	iID     string
-	iType   string
-	iName   string
-	iNumber uint
-}
-
-func (p partitionImpl) Start() uint64 {
-	return p.iStart
-}
-
-func (p partitionImpl) End() uint64 {
-	return p.iEnd
-}
-
-func (p partitionImpl) ID() string {
-	return p.iID
-}
-
-func (p partitionImpl) Type() string {
-	return p.iType
-}
-
-func (p partitionImpl) Name() string {
-	return p.iName
-}
-
-func (p partitionImpl) Number() uint {
-	return p.iNumber
-}
-
-func (p partitionImpl) Size() uint64 {
-	return p.End() - p.Start() + 1
 }
 
 func getDiskNames() ([]string, error) {

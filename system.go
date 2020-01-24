@@ -1,14 +1,14 @@
 package disko
 
-// DiskFilter is filter function that returns true if the mathing disk is
+// DiskFilter is filter function that returns true if the matching disk is
 // accepted false otherwise.
 type DiskFilter func(Disk) bool
 
-// VGFilter is filter function that returns true if the mathing vg is
+// VGFilter is filter function that returns true if the matching vg is
 // accepted false otherwise.
 type VGFilter func(VG) bool
 
-// PVFilter is filter function that returns true if the mathing pv is
+// PVFilter is filter function that returns true if the matching pv is
 // accepted false otherwise.
 type PVFilter func(PV) bool
 
@@ -27,18 +27,14 @@ type System interface {
 	// ScanDisk scans the system for a single disk specified by the device path.
 	ScanDisk(path string) (Disk, error)
 
-	// ScanPVs scans the system for all the PVs and returns the set of PVs that
-	// are accepted by the filter function.
-	ScanPVs(filter PVFilter) (PVSet, error)
+	// CreatePartition creates a partition on the is disk with the specified
+	// partition number, type and disk offsets.
+	CreatePartition(Disk, Partition) error
 
-	// ScanVGs scans the systems for all the VGs and returns the set of VGs that
-	// are accepted by the filter function.
-	ScanVGs(filter VGFilter) (VGSet, error)
+	// DeletePartition deletes the specified partition.
+	DeletePartition(Disk, uint) error
 
-	// CreatePV creates a PV with specified name.
-	CreatePV(name string) (PV, error)
-
-	// CreateVG creates a VG with specified name and adds the provided pvs to
-	// this vg.
-	CreateVG(name string, pvs ...PV) (VG, error)
+	// Wipe wipes the disk to make it a clean disk. All partitions and data
+	// on the disk will be lost.
+	Wipe(Disk) error
 }
