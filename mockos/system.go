@@ -32,7 +32,7 @@ func (ms *mockSys) ScanAllDisks(filter disko.DiskFilter) (disko.DiskSet, error) 
 	disks := disko.DiskSet{}
 
 	for n, d := range ms.Disks {
-		if filter(d) {
+		if filter == nil || filter(d) {
 			disks[n] = d
 		}
 	}
@@ -70,25 +70,33 @@ func (ms *mockSys) ScanDisk(path string) (disko.Disk, error) {
 }
 
 func (ms *mockSys) CreatePartition(d disko.Disk, p disko.Partition) error {
-	if _, ok := d.Partitions[p.Number]; ok {
-		return fmt.Errorf("partition %d already exists", p.Number)
+	if disk, ok := ms.Disks[d.Name]; ok {
+		if _, ok := disk.Partitions[p.Number]; ok {
+			return fmt.Errorf("partition %d already exists", p.Number)
+		}
+
+		disk.Partitions[p.Number] = p
+
+		// Ignore free spaces for mock
+		return nil
 	}
 
-	d.Partitions[p.Number] = p
-
-	// Ignore free spaces for mock
-	return nil
+	return fmt.Errorf("disk %s does not exist", d.Name)
 }
 
-func (ms *mockSys) DeletePartition(d disko.Disk, n uint) error {
-	if _, ok := d.Partitions[n]; !ok {
-		return fmt.Errorf("partition %d does not exist", n)
+func (ms *mockSys) DeletePartition(d disko.Disk, number uint) error {
+	if disk, ok := ms.Disks[d.Name]; ok {
+		if _, ok := disk.Partitions[number]; !ok {
+			return fmt.Errorf("partition %d does not exist", number)
+		}
+
+		delete(disk.Partitions, number)
+
+		// Ignore free space for mock
+		return nil
 	}
 
-	delete(d.Partitions, n)
-
-	// Ignore free space for mock
-	return nil
+	return fmt.Errorf("disk %s does not exist", d.Name)
 }
 
 func (ms *mockSys) Wipe(d disko.Disk) error {

@@ -1,9 +1,7 @@
 package mockos
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"path"
 
 	"github.com/anuvu/disko"
@@ -17,29 +15,20 @@ type mockLVM struct {
 }
 
 // LVM return mock lvm implementation.
-func LVM(sys disko.System, layout string) disko.VolumeManager {
-	file, err := ioutil.ReadFile(layout)
-	if err != nil {
-		panic(err)
+func LVM(sys disko.System) disko.VolumeManager {
+	return &mockLVM{
+		VGs:     disko.VGSet{},
+		PVs:     disko.PVSet{},
+		sys:     sys,
+		freePVs: disko.PVSet{},
 	}
-
-	lvm := &mockLVM{}
-
-	if err := json.Unmarshal(file, lvm); err != nil {
-		panic(err)
-	}
-
-	lvm.sys = sys
-	lvm.freePVs = disko.PVSet{}
-
-	return lvm
 }
 
 func (lvm *mockLVM) ScanPVs(filter disko.PVFilter) (disko.PVSet, error) {
 	pvs := disko.PVSet{}
 
 	for n, pv := range lvm.PVs {
-		if filter(pv) {
+		if filter == nil || filter(pv) {
 			pvs[n] = pv
 		}
 	}
@@ -51,7 +40,7 @@ func (lvm *mockLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
 	vgs := disko.VGSet{}
 
 	for n, vg := range lvm.VGs {
-		if filter(vg) {
+		if filter == nil || filter(vg) {
 			vgs[n] = vg
 		}
 	}
@@ -140,13 +129,17 @@ func (lvm *mockLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
 		size += pv.Size
 	}
 
-	return disko.VG{
+	vg := disko.VG{
 		Name:      name,
 		Size:      size,
 		Volumes:   disko.LVSet{},
 		FreeSpace: size,
 		PVs:       pvSet,
-	}, nil
+	}
+
+	lvm.VGs[name] = vg
+
+	return vg, nil
 }
 
 func (lvm *mockLVM) ExtendVG(vgName string, pvs ...disko.PV) error {

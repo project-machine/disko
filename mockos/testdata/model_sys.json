@@ -1,0 +1,70 @@
+{
+    "disks": {
+        "sda": {
+            "name": "sda",
+            "path": "/dev/sda",
+            "size": 214748364800,
+            "sectorSize": 512,
+            "freeSpace": [],
+            "type": 1,
+            "attachment": 3,
+            "partitions": {},
+            "UdevInfo": {}
+        },
+        "sdb": {
+            "name": "sdb",
+            "path": "/dev/sdb",
+            "size": 322122547200,
+            "sectorSize": 512,
+            "freeSpace": [],
+            "type": 1,
+            "attachment": 1,
+            "partitions": {},
+            "UdevInfo": {}
+        },
+        "sdc": {
+            "name": "sdc",
+            "path": "/dev/sdc",
+            "size": 2638827906662,
+            "sectorSize": 512,
+            "freeSpace": [],
+            "type": 0,
+            "attachment": 1,
+            "partitions": {},
+            "UdevInfo": {}
+        },
+        "sdd": {
+            "name": "sdd",
+            "path": "/dev/sdd",
+            "size": 2638827906662,
+            "sectorSize": 512,
+            "freeSpace": [],
+            "type": 0,
+            "attachment": 1,
+            "partitions": {},
+            "UdevInfo": {}
+        },
+        "sde": {
+            "name": "sde",
+            "path": "/dev/sde",
+            "size": 2638827906662,
+            "sectorSize": 512,
+            "freeSpace": [],
+            "type": 0,
+            "attachment": 1,
+            "partitions": {},
+            "UdevInfo": {}
+        },
+        "sdf": {
+            "name": "sdf",
+            "path": "/dev/sdf",
+            "size": 2638827906662,
+            "sectorSize": 512,
+            "freeSpace": [],
+            "type": 0,
+            "attachment": 1,
+            "partitions": {},
+            "UdevInfo": {}
+        }
+    }
+}
