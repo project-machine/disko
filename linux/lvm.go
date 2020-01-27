@@ -48,15 +48,18 @@ func (ls *linuxLVM) HasVG(vgName string) bool {
 	return false
 }
 
-func (ls *linuxLVM) CryptFormat(lvName string, key string) error {
+func (ls *linuxLVM) CryptFormat(vgName string, lvName string,
+	key string) error {
 	return nil
 }
 
-func (ls *linuxLVM) CryptOpen(lvName string, key string) error {
+func (ls *linuxLVM) CryptOpen(vgName string, lvName string,
+	decryptedName string, key string) error {
 	return nil
 }
 
-func (ls *linuxLVM) CryptClose(lvName string, key string) error {
+func (ls *linuxLVM) CryptClose(vgName string, lvName string,
+	decryptedName string) error {
 	return nil
 }
 
@@ -65,14 +68,15 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 	return disko.LV{}, nil
 }
 
-func (ls *linuxLVM) RemoveLV(lvName string) error {
+func (ls *linuxLVM) RemoveLV(vgName string, lvName string) error {
 	return nil
 }
 
-func (ls *linuxLVM) ExtendLV(lvName string, newSize uint64) error {
+func (ls *linuxLVM) ExtendLV(vgName string, lvName string,
+	newSize uint64) error {
 	return nil
 }
 
-func (ls *linuxLVM) HasLV(name string) bool {
+func (ls *linuxLVM) HasLV(vgName string, name string) bool {
 	return false
 }

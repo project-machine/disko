@@ -191,7 +191,8 @@ func (lvm *mockLVM) HasVG(vgName string) bool {
 	return ok
 }
 
-func (lvm *mockLVM) CryptFormat(lvName string, key string) error {
+func (lvm *mockLVM) CryptFormat(vgName string, lvName string,
+	key string) error {
 	_, lv, err := lvm.findLV(lvName)
 	if err != nil {
 		return fmt.Errorf("lv %s does not exist", lvName)
@@ -202,12 +203,14 @@ func (lvm *mockLVM) CryptFormat(lvName string, key string) error {
 	return nil
 }
 
-func (lvm *mockLVM) CryptOpen(lvName string, key string) error {
+func (lvm *mockLVM) CryptOpen(vgName string, lvName string,
+	decryptedName string, key string) error {
 	// NOOP
 	return nil
 }
 
-func (lvm *mockLVM) CryptClose(lvName string, key string) error {
+func (lvm *mockLVM) CryptClose(vgName string, lvName string,
+	decryptedName string) error {
 	// NOOP
 	return nil
 }
@@ -244,7 +247,7 @@ func (lvm *mockLVM) CreateLV(vgName string, name string, size uint64,
 	return lv, nil
 }
 
-func (lvm *mockLVM) RemoveLV(lvName string) error {
+func (lvm *mockLVM) RemoveLV(vgName string, lvName string) error {
 	vg, lv, err := lvm.findLV(lvName)
 	if err != nil {
 		return err
@@ -259,7 +262,8 @@ func (lvm *mockLVM) RemoveLV(lvName string) error {
 	return nil
 }
 
-func (lvm *mockLVM) ExtendLV(lvName string, newSize uint64) error {
+func (lvm *mockLVM) ExtendLV(vgName string, lvName string,
+	newSize uint64) error {
 	vg, lv, err := lvm.findLV(lvName)
 	if err != nil {
 		return err
@@ -282,7 +286,7 @@ func (lvm *mockLVM) ExtendLV(lvName string, newSize uint64) error {
 	return nil
 }
 
-func (lvm *mockLVM) HasLV(name string) bool {
+func (lvm *mockLVM) HasLV(vgName string, name string) bool {
 	_, _, err := lvm.findLV(name)
 	return err == nil
 }
