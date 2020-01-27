@@ -39,6 +39,7 @@ func TestPV(t *testing.T) {
 	})
 }
 
+//nolint: funlen
 func TestVG(t *testing.T) {
 	Convey("testing lvm VGs", t, func() {
 		sys := mockos.System("testdata/model_sys.json")
@@ -69,6 +70,11 @@ func TestVG(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(ssds, ShouldNotBeEmpty)
 
+		// Scan all PVs
+		allPvs, err := lvm.ScanPVs(nil)
+		So(err, ShouldBeNil)
+		So(allPvs, ShouldNotBeEmpty)
+
 		pvs, err := lvm.ScanPVs(func(p disko.PV) bool {
 			name := strings.TrimSuffix(p.Name, "1")
 			if _, ok := ssds[name]; ok {
@@ -84,10 +90,24 @@ func TestVG(t *testing.T) {
 			pvlist = append(pvlist, pv)
 		}
 
+		// No vgs unless we create one
+		vgs, err := lvm.ScanVGs(nil)
+		So(err, ShouldBeNil)
+		So(vgs, ShouldBeEmpty)
+
 		// Should be able to create a new vg
 		vg, err := lvm.CreateVG("ssd0", pvlist...)
 		So(err, ShouldBeNil)
 		So(vg.Name, ShouldEqual, "ssd0")
+		So(lvm.HasVG("ssd0"), ShouldBeTrue)
+		vgs, err = lvm.ScanVGs(func(v disko.VG) bool { return vg.Name == "ssd0" })
+		So(err, ShouldBeNil)
+		So(len(vgs), ShouldEqual, 1)
+
+		// Deleting PV should fail
+		for _, pv := range pvlist {
+			So(lvm.DeletePV(pv), ShouldBeError)
+		}
 
 		// Cannot create an existing vg
 		_, err = lvm.CreateVG("ssd0", pvlist...)
@@ -96,5 +116,37 @@ func TestVG(t *testing.T) {
 		// Cannot create an existing vg with same pv
 		_, err = lvm.CreateVG("ssd1", pvlist...)
 		So(err, ShouldBeError)
+
+		// Cannot extend a no existing vg
+		err = lvm.ExtendVG("ssdaaa", pvlist...)
+		So(err, ShouldBeError)
+
+		// Cannot extend a vg with pvs already in use
+		err = lvm.ExtendVG("ssd0", pvlist...)
+		So(err, ShouldBeError)
+
+		// Extend using new set of PVs
+		sdaPv := allPvs["sda1"]
+		So(sdaPv.Name, ShouldEqual, "sda1")
+		err = lvm.ExtendVG("ssd0", sdaPv)
+		So(err, ShouldBeNil)
+
+		// Cannot remove an non existent vg
+		err = lvm.RemoveVG("ssdx")
+		So(err, ShouldBeError)
+
+		// Remove the vg
+		err = lvm.RemoveVG("ssd0")
+		So(err, ShouldBeNil)
+		So(lvm.HasVG("ssd0"), ShouldBeFalse)
+	})
+}
+
+func TestLV(t *testing.T) {
+	Convey("test lvm lvs", t, func() {
+		sys := mockos.System("testdata/model_sys.json")
+		lvm := mockos.LVM(sys)
+		So(sys, ShouldNotBeNil)
+		So(lvm, ShouldNotBeNil)
 	})
 }

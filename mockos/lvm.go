@@ -60,23 +60,24 @@ func hasPartition(disks disko.DiskSet, name string) bool {
 	return false
 }
 
-func (lvm *mockLVM) CreatePV(diskName string) (disko.PV, error) {
+func (lvm *mockLVM) CreatePV(deviceName string) (disko.PV, error) {
 	disks, _ := lvm.sys.ScanAllDisks(func(d disko.Disk) bool { return true })
-	d, ok := disks[diskName]
+	d, ok := disks[deviceName]
 
 	if !ok {
-		if !hasPartition(disks, diskName) {
-			return disko.PV{}, fmt.Errorf("disk %s does not exist", diskName)
+		// The device is not a disk, lets check if it is a partition.
+		if !hasPartition(disks, deviceName) {
+			return disko.PV{}, fmt.Errorf("disk %s does not exist", deviceName)
 		}
 	}
 
-	if _, ok := lvm.PVs[diskName]; ok {
-		return disko.PV{}, fmt.Errorf("pv %s already exists", diskName)
+	if _, ok := lvm.PVs[deviceName]; ok {
+		return disko.PV{}, fmt.Errorf("pv %s already exists", deviceName)
 	}
 
 	pv := disko.PV{
-		Name:     diskName,
-		Path:     path.Join("dev", diskName),
+		Name:     deviceName,
+		Path:     path.Join("dev", deviceName),
 		Size:     d.Size,
 		FreeSize: d.Size,
 	}
@@ -163,6 +164,8 @@ func (lvm *mockLVM) ExtendVG(vgName string, pvs ...disko.PV) error {
 		vg.FreeSpace += pv.FreeSize
 	}
 
+	lvm.VGs[vg.Name] = vg
+
 	return nil
 }
 
@@ -178,7 +181,7 @@ func (lvm *mockLVM) RemoveVG(vgName string) error {
 	}
 
 	// Delete this VG from lvm
-	delete(lvm.VGs, vg.Name)
+	delete(lvm.VGs, vgName)
 
 	return nil
 }
@@ -236,6 +239,8 @@ func (lvm *mockLVM) CreateLV(vgName string, name string, size uint64,
 	vg.Volumes[name] = lv
 	vg.FreeSpace -= size
 
+	lvm.VGs[vg.Name] = vg
+
 	return lv, nil
 }
 
@@ -248,6 +253,8 @@ func (lvm *mockLVM) RemoveLV(lvName string) error {
 	// Delete the LV and reclaim the free space
 	delete(vg.Volumes, lvName)
 	vg.FreeSpace += lv.Size
+
+	lvm.VGs[vg.Name] = vg
 
 	return nil
 }

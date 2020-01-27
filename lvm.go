@@ -17,7 +17,8 @@ type VolumeManager interface {
 	// DeletePV deletes the specified PV.
 	DeletePV(pv PV) error
 
-	// HasPV returns true if the pv exists.
+	// HasPV returns true if the pv exists. This indicates that the device
+	// already has an lvm pv header.
 	HasPV(name string) bool
 
 	// CreateVG creates a VG with specified name and adds the provided pvs to

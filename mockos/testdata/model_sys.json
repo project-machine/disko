@@ -65,6 +65,17 @@
             "attachment": 1,
             "partitions": {},
             "UdevInfo": {}
+        },
+        "sdg": {
+            "name": "sdg",
+            "path": "/dev/sdg",
+            "size": 322122547200,
+            "sectorSize": 512,
+            "freeSpace": [],
+            "type": 1,
+            "attachment": 1,
+            "partitions": {},
+            "UdevInfo": {}
         }
     }
 }

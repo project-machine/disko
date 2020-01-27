@@ -19,7 +19,7 @@ func TestSystem(t *testing.T) {
 		Convey("Calling ScanAllDisks with no filter function should return all the disks", func() {
 			diskSet, err := sys.ScanAllDisks(func(d disko.Disk) bool { return true })
 			So(err, ShouldBeNil)
-			So(len(diskSet), ShouldEqual, 6)
+			So(diskSet, ShouldNotBeEmpty)
 
 			// ravchama and gfahimi. ScanAllDisk does not in any case return error.
 			// Probably it should return error when there is no found disks to be compatible
