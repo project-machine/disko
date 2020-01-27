@@ -204,7 +204,7 @@ func (lvm *mockLVM) CryptOpen(lvName string, key string) error {
 	return nil
 }
 
-func (lvm *mockLVM) CryptClose(lvName string, key string) error {
+func (lvm *mockLVM) CryptClose(lvName string) error {
 	// NOOP
 	return nil
 }

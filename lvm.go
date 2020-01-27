@@ -41,8 +41,8 @@ type VolumeManager interface {
 	// key.
 	CryptOpen(lvName string, key string) error
 
-	// CryptClose close the encrypted logical volume using the provided key.
-	CryptClose(lvName string, key string) error
+	// CryptClose close the encrypted logical volume.
+	CryptClose(lvName string) error
 
 	// CreateLV creates a LV with specified name, size and type.
 	CreateLV(vgName string, name string, size uint64, lvType LVType) (LV, error)

@@ -56,7 +56,7 @@ func (ls *linuxLVM) CryptOpen(lvName string, key string) error {
 	return nil
 }
 
-func (ls *linuxLVM) CryptClose(lvName string, key string) error {
+func (ls *linuxLVM) CryptClose(lvName string) error {
 	return nil
 }
 
