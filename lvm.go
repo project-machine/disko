@@ -36,26 +36,26 @@ type VolumeManager interface {
 	HasVG(vgName string) bool
 
 	// CryptFormat setups up encryption for this volume using the provided key.
-	CryptFormat(lvName string, key string) error
+	CryptFormat(vgName string, lvName string, key string) error
 
 	// CryptOpen opens the encrypted logical volume for use using the provided
 	// key.
-	CryptOpen(lvName string, key string) error
+	CryptOpen(vgName string, lvName string, decryptedName string, key string) error
 
 	// CryptClose close the encrypted logical volume using the provided key.
-	CryptClose(lvName string, key string) error
+	CryptClose(vgName string, lvName string, decryptedName string) error
 
 	// CreateLV creates a LV with specified name, size and type.
 	CreateLV(vgName string, name string, size uint64, lvType LVType) (LV, error)
 
 	// RemoveLV removes this LV.
-	RemoveLV(lvName string) error
+	RemoveLV(vgName string, lvName string) error
 
 	// ExtendLV expands the LV to the requested new size.
-	ExtendLV(lvName string, newSize uint64) error
+	ExtendLV(vgName string, lvName string, newSize uint64) error
 
 	// HasVG returns true if the lv exists.
-	HasLV(name string) bool
+	HasLV(vgName string, name string) bool
 }
 
 // PV wraps a LVM physical volume. A lvm physical volume is the raw
@@ -90,6 +90,9 @@ type LV struct {
 	// Name is the name of the logical volume.
 	Name string `json:"name"`
 
+	// Path is the full path of the logical volume.
+	Path string `json:"path"`
+
 	// Size the size of the logical volume.
 	Size uint64 `json:"size"`
 
@@ -98,6 +101,14 @@ type LV struct {
 
 	// Encrypted indicates if the logical volume is encrypted.
 	Encrypted bool `json:"encrypted"`
+
+	// DecryptedLVName is the name of the decrypted logical volume as set by
+	// the CryptOpen call.
+	DecryptedLVName string `json:"decryptedLVName"`
+
+	// DecryptedLVPath is the full path of the decrypted logical volume. This
+	// is set only for encrypted volumes, using the CryptFormat.
+	DecryptedLVPath string `json:"decryptedLVPath"`
 }
 
 // LVType defines the type of the logical volume.
