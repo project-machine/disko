@@ -2,7 +2,11 @@
 
 package linux
 
-import "github.com/anuvu/disko"
+import (
+	"path"
+
+	"github.com/anuvu/disko"
+)
 
 // VolumeManager returns the linux implementation of disko.VolumeManager interface.
 func VolumeManager() disko.VolumeManager {
@@ -13,7 +17,27 @@ type linuxLVM struct {
 }
 
 func (ls *linuxLVM) ScanPVs(filter disko.PVFilter) (disko.PVSet, error) {
-	return nil, nil
+	pvs := disko.PVSet{}
+
+	pvdatum, err := getPvReport()
+	if err != nil {
+		return pvs, err
+	}
+
+	for _, pvd := range pvdatum {
+		pv := disko.PV{
+			Path:     pvd.Path,
+			Name:     path.Base(pvd.Path),
+			Size:     pvd.Size,
+			VGName:   pvd.VGName,
+			FreeSize: pvd.Free,
+		}
+		if filter(pv) {
+			pvs[pv.Name] = pv
+		}
+	}
+
+	return pvs, nil
 }
 
 func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
