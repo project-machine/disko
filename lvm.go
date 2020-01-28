@@ -70,6 +70,9 @@ type PV struct {
 	// Size returns the size of the PV.
 	Size uint64 `json:"size"`
 
+	// The volume group this PV is part of ("" if none)
+	VGName string `json:"vgname"`
+
 	// FreeSize returns the free size of the PV.
 	FreeSize uint64 `json:"freeSize"`
 }
@@ -98,6 +101,9 @@ type LV struct {
 
 	// Type is the type of logical volume.
 	Type LVType `json:"type"`
+
+	// The volume group that this logical volume is part of.
+	VGName string `json:"vgname"`
 
 	// Encrypted indicates if the logical volume is encrypted.
 	Encrypted bool `json:"encrypted"`
