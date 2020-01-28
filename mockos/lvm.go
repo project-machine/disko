@@ -193,31 +193,60 @@ func (lvm *mockLVM) HasVG(vgName string) bool {
 
 func (lvm *mockLVM) CryptFormat(vgName string, lvName string,
 	key string) error {
-	_, lv, err := lvm.findLV(lvName)
+	vg, lv, err := lvm.findLV(vgName, lvName)
 	if err != nil {
 		return fmt.Errorf("lv %s does not exist", lvName)
 	}
 
 	lv.Encrypted = true
+	vg.Volumes[lvName] = lv
 
 	return nil
 }
 
 func (lvm *mockLVM) CryptOpen(vgName string, lvName string,
 	decryptedName string, key string) error {
-	// NOOP
+	vg, lv, err := lvm.findLV(vgName, lvName)
+	if err != nil {
+		return fmt.Errorf("lv %s does not exist", lvName)
+	}
+
+	if !lv.Encrypted {
+		return fmt.Errorf("lv %s is not encrypted", lvName)
+	}
+
+	lv.DecryptedLVName = decryptedName
+	lv.DecryptedLVPath = path.Join("/dev/mapper", decryptedName)
+	vg.Volumes[lvName] = lv
+
 	return nil
 }
 
 func (lvm *mockLVM) CryptClose(vgName string, lvName string,
 	decryptedName string) error {
-	// NOOP
+	vg, lv, err := lvm.findLV(vgName, lvName)
+	if err != nil {
+		return fmt.Errorf("lv %s does not exist", lvName)
+	}
+
+	if !lv.Encrypted {
+		return fmt.Errorf("lv %s is not encrypted", lvName)
+	}
+
+	if lv.DecryptedLVName == "" || lv.DecryptedLVPath == "" {
+		return fmt.Errorf("lv %s is not opened", lvName)
+	}
+
+	lv.DecryptedLVName = ""
+	lv.DecryptedLVPath = ""
+	vg.Volumes[lvName] = lv
+
 	return nil
 }
 
 func (lvm *mockLVM) CreateLV(vgName string, name string, size uint64,
 	lvType disko.LVType) (disko.LV, error) {
-	vg, _, err := lvm.findLV(name)
+	vg, _, err := lvm.findLV(vgName, name)
 	if err == nil {
 		return disko.LV{}, fmt.Errorf("lv %s already exists", name)
 	}
@@ -248,7 +277,7 @@ func (lvm *mockLVM) CreateLV(vgName string, name string, size uint64,
 }
 
 func (lvm *mockLVM) RemoveLV(vgName string, lvName string) error {
-	vg, lv, err := lvm.findLV(lvName)
+	vg, lv, err := lvm.findLV(vgName, lvName)
 	if err != nil {
 		return err
 	}
@@ -264,7 +293,7 @@ func (lvm *mockLVM) RemoveLV(vgName string, lvName string) error {
 
 func (lvm *mockLVM) ExtendLV(vgName string, lvName string,
 	newSize uint64) error {
-	vg, lv, err := lvm.findLV(lvName)
+	vg, lv, err := lvm.findLV(vgName, lvName)
 	if err != nil {
 		return err
 	}
@@ -287,16 +316,20 @@ func (lvm *mockLVM) ExtendLV(vgName string, lvName string,
 }
 
 func (lvm *mockLVM) HasLV(vgName string, name string) bool {
-	_, _, err := lvm.findLV(name)
+	_, _, err := lvm.findLV(vgName, name)
 	return err == nil
 }
 
-func (lvm *mockLVM) findLV(lvName string) (disko.VG, disko.LV, error) {
-	for _, vg := range lvm.VGs {
-		if lv, ok := vg.Volumes[lvName]; ok {
-			return vg, lv, nil
-		}
+func (lvm *mockLVM) findLV(vgName string, lvName string) (disko.VG, disko.LV, error) {
+	vg, ok := lvm.VGs[vgName]
+	if !ok {
+		return disko.VG{}, disko.LV{}, fmt.Errorf("vg %s not found", vgName)
 	}
 
-	return disko.VG{}, disko.LV{}, fmt.Errorf("lv %s not found", lvName)
+	lv, ok := vg.Volumes[lvName]
+	if !ok {
+		return disko.VG{}, disko.LV{}, fmt.Errorf("lv %s not found", lvName)
+	}
+
+	return vg, lv, nil
 }
