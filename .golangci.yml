@@ -12,3 +12,6 @@ issues:
     # 1 is not a magic number. 3 is a magic number.
     - linters: ["gomnd"]
       text: "Magic number: 1,"
+    # test files can have globals.
+    - linters: ["gochecknoglobals"]
+      path: _test.go
