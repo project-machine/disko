@@ -124,7 +124,14 @@ func (ls *linuxLVM) DeletePV(pv disko.PV) error {
 }
 
 func (ls *linuxLVM) HasPV(name string) bool {
-	return false
+	hasPVName := func(p disko.PV) bool { return p.VGName == name }
+
+	pvs, err := ls.ScanPVs(hasPVName)
+	if err != nil {
+		return false
+	}
+
+	return len(pvs) != 0
 }
 
 func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
@@ -140,17 +147,27 @@ func (ls *linuxLVM) RemoveVG(vgName string) error {
 }
 
 func (ls *linuxLVM) HasVG(vgName string) bool {
-	return false
+	hasVGName := func(v disko.VG) bool { return v.Name == vgName }
+
+	vgs, err := ls.ScanVGs(hasVGName)
+	if err != nil {
+		return false
+	}
+
+	return len(vgs) != 0
 }
 
-func (ls *linuxLVM) CryptFormat(vgName string, lvName string,
-	key string) error {
-	return nil
+func (ls *linuxLVM) CryptFormat(vgName string, lvName string, key string) error {
+	return runCommandStdin(
+		key,
+		"cryptsetup", "luksFormat", "--key-file=-", lvPath(vgName, lvName))
 }
 
 func (ls *linuxLVM) CryptOpen(vgName string, lvName string,
 	decryptedName string, key string) error {
-	return nil
+	return runCommandStdin(key,
+		"cryptsetup", "open", "--type=luks", "--key-file=-",
+		lvPath(vgName, lvName), decryptedName)
 }
 
 func (ls *linuxLVM) CryptClose(vgName string, lvName string,
