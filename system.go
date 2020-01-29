@@ -12,6 +12,10 @@ type VGFilter func(VG) bool
 // accepted false otherwise.
 type PVFilter func(PV) bool
 
+// LVFilter is filter function that returns true if the matching lv is
+// accepted false otherwise.
+type LVFilter func(LV) bool
+
 // System interface provides system level disk and lvm methods that are
 // implemented by the specific system.
 type System interface {

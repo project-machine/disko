@@ -4,6 +4,7 @@ package linux
 
 import (
 	"path"
+	"strings"
 
 	"github.com/anuvu/disko"
 )
@@ -41,7 +42,77 @@ func (ls *linuxLVM) ScanPVs(filter disko.PVFilter) (disko.PVSet, error) {
 }
 
 func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
-	return nil, nil
+	var vgdatum []lvmVGData
+	var vgs = disko.VGSet{}
+	var err error
+	var vgd lvmVGData
+	var name string
+
+	vgdatum, err = getVgReport()
+	if err != nil {
+		return vgs, err
+	}
+
+	pvHasVGName := func(p disko.PV) bool { return p.VGName == name }
+	lvHasVGName := func(p disko.LV) bool { return p.VGName == name }
+
+	for _, vgd = range vgdatum {
+		name = vgd.Name
+		vg := disko.VG{
+			Name:      name,
+			Size:      vgd.Size,
+			FreeSpace: vgd.Free,
+		}
+
+		if !filter(vg) {
+			continue
+		}
+
+		pvs, err := ls.ScanPVs(pvHasVGName)
+		if err != nil {
+			return vgs, err
+		}
+
+		lvs, err := ls.ScanLVs(lvHasVGName)
+		if err != nil {
+			return vgs, err
+		}
+
+		vg.PVs = pvs
+		vg.Volumes = lvs
+
+		vgs[name] = vg
+	}
+
+	return vgs, nil
+}
+
+func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
+	var lvdatum []lvmLVData
+	var lvs = disko.LVSet{}
+	var lvd lvmLVData
+	var err error
+
+	lvdatum, err = getLvReport()
+	if err != nil {
+		return lvs, err
+	}
+
+	for _, lvd = range lvdatum {
+		lv := lvd.toLV()
+
+		if err != nil {
+			return lvs, err
+		}
+
+		if !filter(lv) {
+			continue
+		}
+
+		lvs[lv.Name] = lv
+	}
+
+	return lvs, nil
 }
 
 func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
@@ -103,4 +174,35 @@ func (ls *linuxLVM) ExtendLV(vgName string, lvName string,
 
 func (ls *linuxLVM) HasLV(vgName string, name string) bool {
 	return false
+}
+
+func (d *lvmLVData) toLV() disko.LV {
+	crypt := false
+
+	lvtype := disko.THICK
+
+	for _, l := range strings.Split(d.raw["lv_layout"], ",") {
+		if l == "thin" {
+			lvtype = disko.THIN
+			break
+		}
+	}
+
+	if pathExists(d.Path) {
+		_, _, rc := runCommandWithOutputErrorRc("cryptsetup", "isLuks", d.Path)
+		if rc == 0 {
+			crypt = true
+		}
+	}
+
+	lv := disko.LV{
+		Name:      d.Name,
+		Path:      d.Path,
+		VGName:    d.VGName,
+		Size:      d.Size,
+		Type:      lvtype,
+		Encrypted: crypt,
+	}
+
+	return lv
 }
