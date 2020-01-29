@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -95,6 +96,16 @@ func getCommandErrorRC(err error) int {
 	return getCommandErrorRCDefault(err, 127)
 }
 
+func cmdError(args []string, out []byte, err []byte, rc int) error {
+	if rc == 0 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"command failed [%d]:\n cmd: %v\nout:%s\nerr%s",
+		rc, args, out, err)
+}
+
 func runCommandWithOutputErrorRc(args ...string) ([]byte, []byte, int) {
 	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec
 	var stdout, stderr bytes.Buffer
@@ -103,6 +114,39 @@ func runCommandWithOutputErrorRc(args ...string) ([]byte, []byte, int) {
 	err := cmd.Run()
 
 	return stdout.Bytes(), stderr.Bytes(), getCommandErrorRC(err)
+}
+
+/*
+func runCommand(args ...string) error {
+	out, err, rc := runCommandWithOutputErrorRc(args...)
+	return cmdError(args, out, err, rc)
+}
+*/
+
+func runCommandWithOutputErrorRcStdin(input string, args ...string) ([]byte, []byte, int) {
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, input) // nolint:errcheck
+	}()
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+
+	return stdout.Bytes(), stderr.Bytes(), getCommandErrorRC(err)
+}
+
+func runCommandStdin(input string, args ...string) error {
+	out, err, rc := runCommandWithOutputErrorRcStdin(input, args...)
+	return cmdError(args, out, err, rc)
 }
 
 func pathExists(d string) bool {
@@ -200,4 +244,8 @@ func getFileSize(file *os.File) (uint64, error) {
 	}
 
 	return uint64(pos), nil
+}
+
+func lvPath(vgName, lvName string) string {
+	return path.Join("/dev", vgName, lvName)
 }
