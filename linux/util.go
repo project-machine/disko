@@ -105,6 +105,15 @@ func runCommandWithOutputErrorRc(args ...string) ([]byte, []byte, int) {
 	return stdout.Bytes(), stderr.Bytes(), getCommandErrorRC(err)
 }
 
+func pathExists(d string) bool {
+	_, err := os.Stat(d)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
 type uRange struct {
 	Start, End uint64
 }

@@ -73,3 +73,105 @@ func getPvReport() ([]lvmPVData, error) {
 
 	return parsePvReport(out)
 }
+
+type lvmVGData struct {
+	Name string
+	Size uint64
+	UUID string
+	Free uint64
+	raw  map[string]string
+}
+
+func (d *lvmVGData) UnmarshalJSON(b []byte) error {
+	var m map[string]string
+	err := json.Unmarshal(b, &m)
+
+	if err != nil {
+		return err
+	}
+
+	d.raw = m
+	d.Name = m["vg_name"]
+	d.Size = readReportUint64(m["vg_size"])
+	d.UUID = m["vg_uuid"]
+	d.Free = readReportUint64(m["vg_free"])
+
+	return nil
+}
+
+func parseVgReport(report []byte) ([]lvmVGData, error) {
+	var d map[string]([]map[string]([]lvmVGData))
+	err := json.Unmarshal(report, &d)
+
+	if err != nil {
+		return []lvmVGData{}, err
+	}
+
+	return d["report"][0]["vg"], nil
+}
+
+func getVgReport() ([]lvmVGData, error) {
+	out, stderr, rc := runCommandWithOutputErrorRc(
+		"lvm", "vgs", "--options=vg_all", "--report-format=json", "--unit=B")
+
+	if rc != 0 {
+		return []lvmVGData{},
+			fmt.Errorf("failed lvm vgs [%d]: %s\n%s", rc, out, stderr)
+	}
+
+	return parseVgReport(out)
+}
+
+type lvmLVData struct {
+	Name   string
+	VGName string
+	Path   string
+	Size   uint64
+	UUID   string
+	Active bool
+	Pool   string
+	raw    map[string]string
+}
+
+func (d *lvmLVData) UnmarshalJSON(b []byte) error {
+	var m map[string]string
+
+	err := json.Unmarshal(b, &m)
+	if err != nil {
+		return err
+	}
+
+	d.raw = m
+	d.Path = m["lv_path"]
+	d.Name = m["lv_name"]
+	d.VGName = m["vg_name"]
+	d.Active = m["lv_active"] == "active"
+	d.Pool = m["pool_lv"]
+	d.UUID = m["lv_uuid"]
+	d.Size = readReportUint64(m["lv_size"])
+
+	return nil
+}
+
+func parseLvReport(report []byte) ([]lvmLVData, error) {
+	var d map[string]([]map[string]([]lvmLVData))
+
+	err := json.Unmarshal(report, &d)
+	if err != nil {
+		return []lvmLVData{}, err
+	}
+
+	return d["report"][0]["lv"], nil
+}
+
+func getLvReport() ([]lvmLVData, error) {
+	out, stderr, rc := runCommandWithOutputErrorRc(
+		"lvm", "lvs", "--options=lv_all,vg_name", "--report-format=json", "--unit=B")
+
+	if rc != 0 {
+		return []lvmLVData{},
+			fmt.Errorf("failed lvm lvs [%d]: %s\n%s", rc, out, stderr)
+	}
+
+	return parseLvReport(out)
+}
