@@ -79,9 +79,9 @@ func getAttachType(udInfo disko.UdevInfo) disko.AttachmentType {
 	case "virtio":
 		attach = disko.VIRTIO
 	case "":
-		if strings.Contains(udInfo.Properties["DEVPATH"], "virtio") {
+		if strings.Contains(udInfo.SysPath, "/virtio") {
 			attach = disko.VIRTIO
-		} else if strings.HasPrefix(udInfo.Name, "nvme") {
+		} else if strings.Contains(udInfo.SysPath, "/nvme/") {
 			attach = disko.PCIE
 		}
 	}
