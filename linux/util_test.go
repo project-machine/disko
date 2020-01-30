@@ -163,7 +163,7 @@ E: USEC_INITIALIZED=1926114
 		myInfo)
 }
 
-func TestRunCommand(t *testing.T) {
+func TestRunCommandWithOutputErrorRc(t *testing.T) {
 	assert := assert.New(t)
 	out, err, rc := runCommandWithOutputErrorRc(
 		"sh", "-c", "echo -n STDOUT; echo STDERR 1>&2; exit 99")
@@ -185,6 +185,12 @@ func TestRunCommandWithOutputErrorRcStdin(t *testing.T) {
 
 func TestRunCommandWithStdin(t *testing.T) {
 	assert := assert.New(t)
-	assert.Nil(nil, runCommandStdin("", "sh", "-c", "exit 0"))
+	assert.Nil(runCommandStdin("the-stdin", "sh", "-c", "exit 0"))
 	assert.NotNil(runCommandStdin("", "sh", "-c", "exit 1"))
+}
+
+func TestRunCommand(t *testing.T) {
+	assert := assert.New(t)
+	assert.Nil(runCommand("sh", "-c", "exit 0"))
+	assert.NotNil(runCommand("sh", "-c", "exit 1"))
 }
