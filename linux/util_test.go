@@ -162,3 +162,29 @@ E: USEC_INITIALIZED=1926114
 		},
 		myInfo)
 }
+
+func TestRunCommand(t *testing.T) {
+	assert := assert.New(t)
+	out, err, rc := runCommandWithOutputErrorRc(
+		"sh", "-c", "echo -n STDOUT; echo STDERR 1>&2; exit 99")
+	assert.Equal(out, []byte("STDOUT"))
+	assert.Equal(err, []byte("STDERR\n"))
+	assert.Equal(rc, 99)
+}
+
+func TestRunCommandWithOutputErrorRcStdin(t *testing.T) {
+	assert := assert.New(t)
+	out, err, rc := runCommandWithOutputErrorRcStdin(
+		"line1\nline2\n0\n",
+		"sh", "-c",
+		`read o; echo "$o"; read o; echo "$o" 1>&2; read rc; exit $rc`)
+	assert.Equal(out, []byte("line1\n"))
+	assert.Equal(err, []byte("line2\n"))
+	assert.Equal(rc, 0)
+}
+
+func TestRunCommandWithStdin(t *testing.T) {
+	assert := assert.New(t)
+	assert.Nil(nil, runCommandStdin("", "sh", "-c", "exit 0"))
+	assert.NotNil(runCommandStdin("", "sh", "-c", "exit 1"))
+}
