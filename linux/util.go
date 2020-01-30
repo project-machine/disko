@@ -116,12 +116,10 @@ func runCommandWithOutputErrorRc(args ...string) ([]byte, []byte, int) {
 	return stdout.Bytes(), stderr.Bytes(), getCommandErrorRC(err)
 }
 
-/*
 func runCommand(args ...string) error {
 	out, err, rc := runCommandWithOutputErrorRc(args...)
 	return cmdError(args, out, err, rc)
 }
-*/
 
 func runCommandWithOutputErrorRcStdin(input string, args ...string) ([]byte, []byte, int) {
 	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec
@@ -147,6 +145,19 @@ func runCommandWithOutputErrorRcStdin(input string, args ...string) ([]byte, []b
 func runCommandStdin(input string, args ...string) error {
 	out, err, rc := runCommandWithOutputErrorRcStdin(input, args...)
 	return cmdError(args, out, err, rc)
+}
+
+func udevSettle() error {
+	return runCommand("udevamd", "settle")
+}
+
+func runCommandSettled(args ...string) error {
+	err := runCommand(args...)
+	if err != nil {
+		return err
+	}
+
+	return udevSettle()
 }
 
 func pathExists(d string) bool {

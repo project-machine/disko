@@ -3,6 +3,7 @@
 package linux
 
 import (
+	"fmt"
 	"path"
 	"strings"
 
@@ -26,13 +27,7 @@ func (ls *linuxLVM) ScanPVs(filter disko.PVFilter) (disko.PVSet, error) {
 	}
 
 	for _, pvd := range pvdatum {
-		pv := disko.PV{
-			Path:     pvd.Path,
-			Name:     path.Base(pvd.Path),
-			Size:     pvd.Size,
-			VGName:   pvd.VGName,
-			FreeSize: pvd.Free,
-		}
+		pv := pvd.toPV()
 		if filter(pv) {
 			pvs[pv.Name] = pv
 		}
@@ -116,30 +111,58 @@ func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
 }
 
 func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
-	return disko.PV{}, nil
+	err := runCommandSettled("lvm", "pvcreate", name)
+
+	if err != nil {
+		return disko.PV{}, err
+	}
+
+	pvdatum, err := getPvReport()
+	if err != nil {
+		return disko.PV{}, err
+	}
+
+	for _, pvd := range pvdatum {
+		if path.Base(pvd.Path) == name {
+			return pvd.toPV(), nil
+		}
+	}
+
+	return disko.PV{},
+		fmt.Errorf("unexpected error creating pv %s", name)
 }
 
 func (ls *linuxLVM) DeletePV(pv disko.PV) error {
-	return nil
+	return runCommandSettled("lvm", "pvremove", "--force", pv.Path)
 }
 
 func (ls *linuxLVM) HasPV(name string) bool {
-	/*
-		// FIXME: Using the variable on range scope `disko` in function literal (scopelint)
-			hasPVName := func(p disko.PV) bool { return p.VGName == name }
+	pvs, err := ls.ScanPVs(getPVFilterByName(name))
+	if err != nil {
+		return false
+	}
 
-			pvs, err := ls.ScanPVs(hasPVName)
-			if err != nil {
-				return false
-			}
-
-			return len(pvs) != 0
-	*/
-	return false
+	return len(pvs) != 0
 }
 
 func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
-	return disko.VG{}, nil
+	cmd := []string{"lvm", "vgcreate"}
+	for _, p := range pvs {
+		cmd = append(cmd, p.Path)
+	}
+
+	err := runCommandSettled(cmd...)
+	if err != nil {
+		return disko.VG{}, nil
+	}
+
+	vgSet, err := ls.ScanVGs(getVGFilterByName(name))
+
+	if err != nil {
+		return disko.VG{}, nil
+	}
+
+	return vgSet[name], nil
 }
 
 func (ls *linuxLVM) ExtendVG(vgName string, pvs ...disko.PV) error {
@@ -147,22 +170,16 @@ func (ls *linuxLVM) ExtendVG(vgName string, pvs ...disko.PV) error {
 }
 
 func (ls *linuxLVM) RemoveVG(vgName string) error {
-	return nil
+	return runCommand("lvm", "lvremove", "--force", vgName)
 }
 
 func (ls *linuxLVM) HasVG(vgName string) bool {
-	/*
-		// FIXME: Using the variable on range scope `disko` in function literal (scopelint)
-		hasVGName := func(v disko.VG) bool { return v.Name == vgName }
+	vgs, err := ls.ScanVGs(getVGFilterByName(vgName))
+	if err != nil {
+		return false
+	}
 
-		vgs, err := ls.ScanVGs(hasVGName)
-		if err != nil {
-			return false
-		}
-
-		return len(vgs) != 0
-	*/
-	return false
+	return len(vgs) != 0
 }
 
 func (ls *linuxLVM) CryptFormat(vgName string, lvName string, key string) error {
@@ -201,6 +218,14 @@ func (ls *linuxLVM) HasLV(vgName string, name string) bool {
 	return false
 }
 
+func getVGFilterByName(name string) disko.VGFilter {
+	return func(d disko.VG) bool { return d.Name == name }
+}
+
+func getPVFilterByName(name string) disko.PVFilter {
+	return func(d disko.PV) bool { return d.Name == name }
+}
+
 func (d *lvmLVData) toLV() disko.LV {
 	crypt := false
 
@@ -230,4 +255,14 @@ func (d *lvmLVData) toLV() disko.LV {
 	}
 
 	return lv
+}
+
+func (d *lvmPVData) toPV() disko.PV {
+	return disko.PV{
+		Path:     d.Path,
+		Name:     path.Base(d.Path),
+		Size:     d.Size,
+		VGName:   d.VGName,
+		FreeSize: d.Free,
+	}
 }
