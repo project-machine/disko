@@ -166,6 +166,16 @@ func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
 }
 
 func (ls *linuxLVM) ExtendVG(vgName string, pvs ...disko.PV) error {
+	cmd := []string{"lvm", "vgextend", vgName}
+	for _, p := range pvs {
+		cmd = append(cmd, p.Path)
+	}
+
+	err := runCommandSettled(cmd...)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -197,7 +207,7 @@ func (ls *linuxLVM) CryptOpen(vgName string, lvName string,
 
 func (ls *linuxLVM) CryptClose(vgName string, lvName string,
 	decryptedName string) error {
-	return nil
+	return runCommand("cryptsetup", "close", decryptedName)
 }
 
 func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
