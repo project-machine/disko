@@ -146,7 +146,7 @@ func (ls *linuxLVM) HasPV(name string) bool {
 }
 
 func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
-	cmd := []string{"lvm", "vgcreate"}
+	cmd := []string{"lvm", "vgcreate", name}
 	for _, p := range pvs {
 		cmd = append(cmd, p.Path)
 	}
