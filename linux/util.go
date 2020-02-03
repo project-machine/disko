@@ -260,3 +260,7 @@ func getFileSize(file *os.File) (uint64, error) {
 func lvPath(vgName, lvName string) string {
 	return path.Join("/dev", vgName, lvName)
 }
+
+func vgLv(vgName, lvName string) string {
+	return path.Join(vgName, lvName)
+}

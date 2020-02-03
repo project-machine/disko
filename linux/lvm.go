@@ -4,6 +4,7 @@ package linux
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"strings"
 
@@ -40,19 +41,14 @@ func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
 	var vgdatum []lvmVGData
 	var vgs = disko.VGSet{}
 	var err error
-	var vgd lvmVGData
-	var name string
 
 	vgdatum, err = getVgReport()
 	if err != nil {
 		return vgs, err
 	}
 
-	pvHasVGName := func(p disko.PV) bool { return p.VGName == name }
-	lvHasVGName := func(p disko.LV) bool { return p.VGName == name }
-
-	for _, vgd = range vgdatum {
-		name = vgd.Name
+	for _, vgd := range vgdatum {
+		name := vgd.Name
 		vg := disko.VG{
 			Name:      name,
 			Size:      vgd.Size,
@@ -63,12 +59,13 @@ func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
 			continue
 		}
 
-		pvs, err := ls.ScanPVs(pvHasVGName)
+		pvs, err := ls.ScanPVs(getPVFilterByName(name))
 		if err != nil {
 			return vgs, err
 		}
 
-		lvs, err := ls.ScanLVs(lvHasVGName)
+		lvs, err := ls.ScanLVs(
+			func(d disko.LV) bool { return d.VGName == name })
 		if err != nil {
 			return vgs, err
 		}
@@ -85,7 +82,6 @@ func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
 func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
 	var lvdatum []lvmLVData
 	var lvs = disko.LVSet{}
-	var lvd lvmLVData
 	var err error
 
 	lvdatum, err = getLvReport()
@@ -93,7 +89,7 @@ func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
 		return lvs, err
 	}
 
-	for _, lvd = range lvdatum {
+	for _, lvd := range lvdatum {
 		lv := lvd.toLV()
 
 		if err != nil {
@@ -111,25 +107,25 @@ func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
 }
 
 func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
+	nilPV := disko.PV{}
+
 	err := runCommandSettled("lvm", "pvcreate", name)
 
 	if err != nil {
-		return disko.PV{}, err
+		return nilPV, err
 	}
 
-	pvdatum, err := getPvReport()
+	pvs, err := ls.ScanPVs(getPVFilterByName(name))
 	if err != nil {
-		return disko.PV{}, err
+		return nilPV, err
 	}
 
-	for _, pvd := range pvdatum {
-		if path.Base(pvd.Path) == name {
-			return pvd.toPV(), nil
-		}
+	if len(pvs) != 1 {
+		return nilPV,
+			fmt.Errorf("found %d PVs with named %s: %v", len(pvs), name, pvs)
 	}
 
-	return disko.PV{},
-		fmt.Errorf("unexpected error creating pv %s", name)
+	return pvs[name], nil
 }
 
 func (ls *linuxLVM) DeletePV(pv disko.PV) error {
@@ -212,20 +208,62 @@ func (ls *linuxLVM) CryptClose(vgName string, lvName string,
 
 func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 	lvType disko.LVType) (disko.LV, error) {
-	return disko.LV{}, nil
+	nilLV := disko.LV{}
+
+	if err := isRoundExtent(size); err != nil {
+		return nilLV, err
+	}
+
+	if lvType == disko.THIN {
+		// thin lv creation would require creating a pool
+		return nilLV, fmt.Errorf("not supported. Thin LV create not implemented")
+	}
+
+	err := runCommandSettled(
+		"lvm", "lvcreate", "--ignoremonitoring", "--yes", "--activate=y",
+		"--setactivationskip=n", fmt.Sprintf("--size=%dB", size),
+		fmt.Sprintf("--name=%s", name), vgName)
+
+	if err != nil {
+		return nilLV, err
+	}
+
+	lvs, err := ls.ScanLVs(getLVFilterByName(vgName, name))
+
+	if err != nil {
+		return nilLV, err
+	}
+
+	if len(lvs) != 1 {
+		return nilLV, fmt.Errorf("found %d LVs with %s/%s", len(lvs), vgName, name)
+	}
+
+	return lvs[name], nil
 }
 
 func (ls *linuxLVM) RemoveLV(vgName string, lvName string) error {
-	return nil
+	return runCommandSettled(
+		"lvm", "lvremove", "--force", "--force", vgLv(vgName, lvName))
 }
 
 func (ls *linuxLVM) ExtendLV(vgName string, lvName string,
 	newSize uint64) error {
-	return nil
+	if err := isRoundExtent(newSize); err != nil {
+		return err
+	}
+
+	return runCommandSettled(
+		"lvm", "lvextend", fmt.Sprintf("--size=%dB", newSize),
+		vgLv(vgName, lvName))
 }
 
 func (ls *linuxLVM) HasLV(vgName string, name string) bool {
-	return false
+	lvs, err := ls.ScanLVs(getLVFilterByName(vgName, name))
+	if err != nil {
+		log.Panicf("Failed to scan logical volumes: %s", err)
+	}
+
+	return len(lvs) != 0
 }
 
 func getVGFilterByName(name string) disko.VGFilter {
@@ -234,6 +272,19 @@ func getVGFilterByName(name string) disko.VGFilter {
 
 func getPVFilterByName(name string) disko.PVFilter {
 	return func(d disko.PV) bool { return d.Name == name }
+}
+
+func getLVFilterByName(vgName string, name string) disko.LVFilter {
+	return func(d disko.LV) bool { return d.Name == name && d.VGName == vgName }
+}
+
+func isRoundExtent(size uint64) error {
+	if size%disko.ExtentSize == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("%d is not evenly divisible by extent size %d",
+		size, disko.ExtentSize)
 }
 
 func (d *lvmLVData) toLV() disko.LV {
