@@ -264,3 +264,23 @@ func lvPath(vgName, lvName string) string {
 func vgLv(vgName, lvName string) string {
 	return path.Join(vgName, lvName)
 }
+
+// Ceiling returns the smallest integer equal to or larger than val that is evenly
+// divisible by unit.
+func Ceiling(val, unit uint64) uint64 {
+	if val%unit == 0 {
+		return val
+	}
+
+	return ((val + unit) / unit) * unit
+}
+
+// Floor returns the largest integer equal to or less than val that is evenly
+// divisible by unit.
+func Floor(val, unit uint64) uint64 {
+	if val%unit == 0 {
+		return val
+	}
+
+	return (val / unit) * unit
+}

@@ -194,3 +194,25 @@ func TestRunCommand(t *testing.T) {
 	assert.Nil(runCommand("sh", "-c", "exit 0"))
 	assert.NotNil(runCommand("sh", "-c", "exit 1"))
 }
+
+func TestCeilingUp(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal(uint64(100), Ceiling(98, 4)) //nolint: gomnd
+}
+
+func TestCeilingEven(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal(uint64(100), Ceiling(100, 4)) //nolint: gomnd
+	assert.Equal(uint64(97), Ceiling(97, 1))   //nolint: gomnd
+}
+
+func TestFloorDown(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal(uint64(96), Floor(98, 4)) //nolint: gomnd
+}
+
+func TestFloorEven(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal(uint64(100), Floor(100, 4)) //nolint: gomnd
+	assert.Equal(uint64(97), Floor(97, 1))   //nolint: gomnd
+}
