@@ -138,7 +138,6 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		disk.SectorSize = ssize
 	}
 
-	disk.FreeSpaces = freeSpacesWithMin(disk, disko.ExtentSize)
 	disk.Partitions = parts
 
 	return disk, nil
