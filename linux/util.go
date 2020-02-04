@@ -217,7 +217,7 @@ func findRangeGaps(ranges []uRange, min, max uint64) []uRange {
 	return ret
 }
 
-func getBlockDevSize(dev string) (uint64, error) {
+func getBlockSize(dev string) (uint64, error) {
 	path := path.Join("/sys/block", path.Base(dev), "queue/logical_block_size")
 
 	content, err := ioutil.ReadFile(path)
@@ -231,7 +231,7 @@ func getBlockDevSize(dev string) (uint64, error) {
 	if err != nil {
 		return uint64(0),
 			errors.Wrapf(err,
-				"getBlockDevSize(%s): failed to convert '%s' to int", dev, d)
+				"getBlockSize(%s): failed to convert '%s' to int", dev, d)
 	}
 
 	return uint64(v), nil
