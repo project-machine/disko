@@ -3,6 +3,7 @@
 package linux
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/anuvu/disko"
@@ -215,4 +216,60 @@ func TestFloorEven(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(uint64(100), Floor(100, 4)) //nolint: gomnd
 	assert.Equal(uint64(97), Floor(97, 1))   //nolint: gomnd
+}
+
+func TestGetFileSize(t *testing.T) {
+	data := "This is my data in the file"
+
+	fp, err := ioutil.TempFile("", "testSize")
+	if err != nil {
+		t.Fatalf("Failed to make test file: %s", err)
+	}
+
+	if _, err := fp.WriteString(data); err != nil {
+		t.Fatalf("failed writing to file %s: %s", fp.Name(), err)
+	}
+
+	if err := fp.Sync(); err != nil {
+		t.Fatal("failed sync")
+	}
+
+	found, err := getFileSize(fp)
+	if err != nil {
+		t.Errorf("Failed to getFileSize: %s", err)
+	}
+
+	if found != uint64(len(data)) {
+		t.Errorf("Found size %d expected %d", found, len(data))
+	}
+}
+
+func TestLvPath(t *testing.T) {
+	tables := []struct{ vgName, lvName, expected string }{
+		{"vg0", "lv0", "/dev/vg0/lv0"},
+		{"vg0", "my-foo_bar", "/dev/vg0/my-foo_bar"},
+	}
+
+	for _, table := range tables {
+		found := lvPath(table.vgName, table.lvName)
+		if found != table.expected {
+			t.Errorf("lvPath(%s, %s) returned '%s'. expected '%s'",
+				table.vgName, table.lvName, found, table.expected)
+		}
+	}
+}
+
+func TestVgLv(t *testing.T) {
+	tables := []struct{ vgName, lvName, expected string }{
+		{"vg0", "lv0", "vg0/lv0"},
+		{"vg0", "my-foo_bar", "vg0/my-foo_bar"},
+	}
+
+	for _, table := range tables {
+		found := vgLv(table.vgName, table.lvName)
+		if found != table.expected {
+			t.Errorf("vgLv(%s, %s) returned '%s'. expected '%s'",
+				table.vgName, table.lvName, found, table.expected)
+		}
+	}
 }
