@@ -152,29 +152,6 @@ func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
 	return parts, uint(ssize), nil
 }
 
-func freeSpacesWithMin(d disko.Disk, minSize uint64) []disko.FreeSpace {
-	// Stay out of the first 1Mebibyte
-	// Leave 33 sectors at end (for GPT second header) and round 1MiB down.
-	//nolint: gomnd
-	end := ((d.Size - uint64(d.SectorSize*33)/disko.Mebibyte) * disko.Mebibyte)
-	used := []uRange{{0, 1*disko.Mebibyte - 1}, {end, d.Size}}
-	avail := []disko.FreeSpace{}
-
-	for _, p := range d.Partitions {
-		used = append(used, uRange{p.Start, p.End})
-	}
-
-	for _, g := range findRangeGaps(used, 0, d.Size) {
-		if g.Size() < minSize {
-			continue
-		}
-
-		avail = append(avail, disko.FreeSpace(g))
-	}
-
-	return avail
-}
-
 func getDiskNames() ([]string, error) {
 	realDiskKnameRegex := regexp.MustCompile("^((s|v|xv|h)d[a-z]|nvme[0-9]n[0-9]+)$")
 	disks := []string{}

@@ -71,10 +71,6 @@ type Disk struct {
 	// applicable it will return 0.
 	SectorSize uint `json:"sectorSize"`
 
-	// FreeSpaces is a list of slots of free spaces on the disk. These slots can
-	// be used to create new partitions.
-	FreeSpaces []FreeSpace `json:"freeSpace"`
-
 	// Type is the DiskType indicating the type of this disk. This value
 	// can be used to determine if the disk is of a particular media type like
 	// HDD, SSD or NVMe.
@@ -91,12 +87,42 @@ type Disk struct {
 	UdevInfo UdevInfo `json:"udevInfo"`
 }
 
+// FreeSpacesWithMin returns a list of freespaces that are minSize long or more.
+func (d *Disk) FreeSpacesWithMin(minSize uint64) []FreeSpace {
+	// Stay out of the first 1Mebibyte
+	// Leave 33 sectors at end (for GPT second header) and round 1MiB down.
+	end := ((d.Size - uint64(d.SectorSize)*33) / Mebibyte) * Mebibyte
+	used := []uRange{{0, 1*Mebibyte - 1}, {end, d.Size}}
+
+	for _, p := range d.Partitions {
+		used = append(used, uRange{p.Start, p.End})
+	}
+
+	avail := []FreeSpace{}
+
+	for _, g := range findRangeGaps(used, 0, d.Size) {
+		if g.Size() < minSize {
+			continue
+		}
+
+		avail = append(avail, FreeSpace(g))
+	}
+
+	return avail
+}
+
+// FreeSpaces returns a list of slots of free spaces on the disk. These slots can
+// be used to create new partitions.
+func (d *Disk) FreeSpaces() []FreeSpace {
+	return d.FreeSpacesWithMin(ExtentSize)
+}
+
 func (d Disk) String() string {
 	var avail uint64 = 0
 
-	fs := d.FreeSpaces
+	fs := d.FreeSpaces()
 
-	for _, f := range d.FreeSpaces {
+	for _, f := range fs {
 		avail += f.Size()
 	}
 
@@ -109,7 +135,7 @@ func (d Disk) String() string {
 	}
 
 	return fmt.Sprintf(
-		"%s (%s) Size=%s NumParts=%d FreeSpace=%s/%d, SectorSize=%d Attachment=%s Type=%s",
+		"%s (%s) Size=%s NumParts=%d FreeSpace=%s/%d SectorSize=%d Attachment=%s Type=%s",
 		d.Name, d.Path, mbsize(d.Size), len(d.Partitions),
 		mbsize(avail), len(fs), d.SectorSize,
 		string(d.Attachment), string(d.Type))
@@ -117,7 +143,7 @@ func (d Disk) String() string {
 
 // Details returns the disk details as a table formatted string.
 func (d Disk) Details() string {
-	fss := d.FreeSpaces
+	fss := d.FreeSpaces()
 	var fsn int = 0
 
 	mbsize := func(n, o uint64) string {
@@ -191,7 +217,7 @@ type Partition struct {
 
 // Size returns the size of the partition in bytes.
 func (p *Partition) Size() uint64 {
-	return p.End - p.Start
+	return p.End - p.Start + 1
 }
 
 // FreeSpace indicates a free slot on the disk with a Start and End offset,
@@ -203,5 +229,5 @@ type FreeSpace struct {
 
 // Size returns the size of the free space, which is End - Start.
 func (f *FreeSpace) Size() uint64 {
-	return f.End - f.Start
+	return f.End - f.Start + 1
 }
