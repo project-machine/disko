@@ -48,14 +48,38 @@ func (t *virtType) String() string {
 	return virtTypesToString[*t]
 }
 
+type detector interface {
+	detectVirt() ([]byte, []byte, int)
+	logf(string, ...interface{})
+}
+
+type systemdDetector struct {
+}
+
+func (d *systemdDetector) detectVirt() ([]byte, []byte, int) {
+	return runCommandWithOutputErrorRc("systemd-detect-virt", "--vm")
+}
+
+func (d *systemdDetector) logf(format string, a ...interface{}) {
+	log.Printf(format, a...)
+}
+
 func getVirtType() virtType {
+	return getVirtTypeIface(&systemdDetector{})
+}
+
+func getVirtTypeIface(sdv detector) virtType {
 	if systemVirtType != virtUnset {
 		return systemVirtType
 	}
 
-	out, stderr, rc := runCommandWithOutputErrorRc("systemd-detect-virt", "--vm")
+	out, stderr, rc := sdv.detectVirt()
+
 	if rc == 0 || rc == 1 {
-		strOut := string(out[:len(out)-1])
+		var strOut string = ""
+		if len(out) > 1 {
+			strOut = string(out[:len(out)-1])
+		}
 
 		for t, s := range virtTypesToString {
 			if strOut == s {
@@ -65,10 +89,12 @@ func getVirtType() virtType {
 		}
 
 		if systemVirtType == virtUnset {
-			log.Printf("Unknown virt type: %s/%s", strOut, string(stderr))
+			sdv.logf("Unknown virt type: %s/%s", strOut, string(stderr))
+
+			systemVirtType = virtUnknown
 		}
 	} else {
-		log.Printf("Failed to read virt type [%d]: %s/%s",
+		sdv.logf("Failed to read virt type [%d]: %s/%s",
 			rc, string(out), string(stderr))
 		systemVirtType = virtError
 	}
