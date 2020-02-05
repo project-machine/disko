@@ -16,6 +16,10 @@ const (
 	NVME
 )
 
+func (t DiskType) String() string {
+	return []string{"HDD", "SSD", "NVME"}[t]
+}
+
 // AttachmentType enumerates the type of device to which the disks are
 // attached to in the system.
 type AttachmentType int
@@ -45,6 +49,11 @@ const (
 	// IDE - indicates that the device is attached to IDE.
 	IDE
 )
+
+func (t AttachmentType) String() string {
+	return []string{"UNKNOWN", "RAID", "SCSI", "ATA", "PCIE", "USB",
+		"VIRTIO", "IDE"}[t]
+}
 
 // DiskSet is a map of the kernel device name and the disk.
 type DiskSet map[string]Disk
@@ -138,7 +147,7 @@ func (d Disk) String() string {
 		"%s (%s) Size=%s NumParts=%d FreeSpace=%s/%d SectorSize=%d Attachment=%s Type=%s",
 		d.Name, d.Path, mbsize(d.Size), len(d.Partitions),
 		mbsize(avail), len(fs), d.SectorSize,
-		string(d.Attachment), string(d.Type))
+		d.Attachment, d.Type)
 }
 
 // Details returns the disk details as a table formatted string.

@@ -102,3 +102,42 @@ func TestDiskDetails(t *testing.T) {
 		t.Errorf("Expected: '%s'\nFound: '%s'\n", expShort, found)
 	}
 }
+
+func TestDiskTypeString(t *testing.T) {
+	for _, d := range []struct {
+		dtype    disko.DiskType
+		expected string
+	}{
+		{disko.HDD, "HDD"},
+		{disko.SSD, "SSD"},
+		{disko.NVME, "NVME"},
+	} {
+		found := d.dtype.String()
+		if found != d.expected {
+			t.Errorf("disko.DiskType(%d).String() found %s, expected %s",
+				d.dtype, found, d.expected)
+		}
+	}
+}
+
+func TestAttachmentTypeString(t *testing.T) {
+	for _, d := range []struct {
+		dtype    disko.AttachmentType
+		expected string
+	}{
+		{disko.UnknownAttach, "UNKNOWN"},
+		{disko.RAID, "RAID"},
+		{disko.SCSI, "SCSI"},
+		{disko.ATA, "ATA"},
+		{disko.PCIE, "PCIE"},
+		{disko.USB, "USB"},
+		{disko.VIRTIO, "VIRTIO"},
+		{disko.IDE, "IDE"},
+	} {
+		found := d.dtype.String()
+		if found != d.expected {
+			t.Errorf("disko.AttachmentType(%d).String() found %s, expected %s",
+				d.dtype, found, d.expected)
+		}
+	}
+}
