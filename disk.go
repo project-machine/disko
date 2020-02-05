@@ -92,7 +92,7 @@ func (d *Disk) FreeSpacesWithMin(minSize uint64) []FreeSpace {
 	// Stay out of the first 1Mebibyte
 	// Leave 33 sectors at end (for GPT second header) and round 1MiB down.
 	end := ((d.Size - uint64(d.SectorSize)*33) / Mebibyte) * Mebibyte
-	used := []uRange{{0, 1*Mebibyte - 1}, {end, d.Size}}
+	used := uRanges{{0, 1*Mebibyte - 1}, {end, d.Size}}
 
 	for _, p := range d.Partitions {
 		used = append(used, uRange{p.Start, p.End})
