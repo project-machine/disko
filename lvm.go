@@ -128,6 +128,10 @@ const (
 	THIN
 )
 
+func (t LVType) String() string {
+	return []string{"THICK", "THIN"}[t]
+}
+
 // VG wraps a LVM volume group. A volume group combines one or more
 // physical volumes into storage pools and provides a unified logical device
 // with combined storage capacity of the underlying physical volumes.
