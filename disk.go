@@ -55,6 +55,9 @@ func (t AttachmentType) String() string {
 		"VIRTIO", "IDE"}[t]
 }
 
+// PartType represents a GPT Partition GUID
+type PartType GUID
+
 // DiskSet is a map of the kernel device name and the disk.
 type DiskSet map[string]Disk
 
@@ -212,10 +215,10 @@ type Partition struct {
 	End uint64 `json:"end"`
 
 	// ID is the partition id.
-	ID string `json:"id"`
+	ID GUID `json:"id"`
 
 	// Type is the partition type.
-	Type string `json:"type"`
+	Type PartType `json:"type"`
 
 	// Name is the name of this partition.
 	Name string `json:"name"`

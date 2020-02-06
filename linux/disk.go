@@ -137,8 +137,8 @@ func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
 		part := disko.Partition{
 			Start:  p.FirstLBA * ssize,
 			End:    p.LastLBA*ssize + ssize - 1,
-			ID:     p.Id.String(),
-			Type:   p.Type.String(),
+			ID:     disko.GUID(p.Id),
+			Type:   disko.PartType(p.Type),
 			Name:   p.Name(),
 			Number: uint(n + 1),
 		}

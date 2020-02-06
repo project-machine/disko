@@ -5,11 +5,14 @@ import (
 
 	"github.com/anuvu/disko"
 	"github.com/anuvu/disko/mockos"
+	"github.com/anuvu/disko/partid"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 //nolint: funlen, gomnd
 func TestSystem(t *testing.T) {
+	myID, _ := disko.StringToGUID("01234567-89AB-CDEF-0123-456789ABCDEF")
+
 	Convey("testing System Model", t, func() {
 		So(func() { mockos.System("unknown") }, ShouldPanic)
 
@@ -65,7 +68,8 @@ func TestSystem(t *testing.T) {
 			partition := disko.Partition{
 				Start:  0,
 				End:    10000,
-				ID:     "1234567",
+				ID:     myID,
+				Type:   partid.LinuxFS,
 				Name:   "sda1",
 				Number: 1,
 			}
@@ -112,7 +116,8 @@ func TestSystem(t *testing.T) {
 			partition := disko.Partition{
 				Start:  0,
 				End:    10000,
-				ID:     "1234567",
+				ID:     myID,
+				Type:   partid.LinuxFS,
 				Name:   "partition1",
 				Number: 1,
 			}

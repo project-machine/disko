@@ -6,6 +6,7 @@ import (
 
 	"github.com/anuvu/disko"
 	"github.com/anuvu/disko/mockos"
+	"github.com/anuvu/disko/partid"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -54,7 +55,7 @@ func TestVG(t *testing.T) {
 				Number: 1,
 				Start:  0,
 				End:    d.Size,
-				Type:   "ext4",
+				Type:   partid.LinuxFS,
 			})
 
 			So(err, ShouldBeNil)
