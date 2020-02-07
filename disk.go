@@ -1,6 +1,9 @@
 package disko
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // DiskType enumerates supported disk types.
 type DiskType int
@@ -230,6 +233,61 @@ type Partition struct {
 // Size returns the size of the partition in bytes.
 func (p *Partition) Size() uint64 {
 	return p.End - p.Start + 1
+}
+
+// jPartition - Partition, but for json (ids are strings)
+type jPartition struct {
+	Start  uint64 `json:"start"`
+	End    uint64 `json:"end"`
+	ID     string `json:"id"`
+	Type   string `json:"type"`
+	Name   string `json:"name"`
+	Number uint   `json:"number"`
+}
+
+// UnmarshalJSON - unserialize from json
+func (p *Partition) UnmarshalJSON(b []byte) error {
+	j := jPartition{}
+
+	err := json.Unmarshal(b, &j)
+	if err != nil {
+		return err
+	}
+
+	id, err := StringToGUID(j.ID)
+	if err != nil {
+		return err
+	}
+
+	ptype, err := StringToGUID(j.Type)
+	if err != nil {
+		return err
+	}
+
+	p.Start = j.Start
+	p.End = j.End
+	p.ID = id
+	p.Type = PartType(ptype)
+	p.Name = j.Name
+	p.Number = j.Number
+
+	return nil
+}
+
+// MarshalJSON - serialize to json
+func (p *Partition) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jPartition{
+		Start:  p.Start,
+		End:    p.End,
+		ID:     p.ID.String(),
+		Type:   p.Type.String(),
+		Name:   p.Name,
+		Number: p.Number,
+	})
+}
+
+func (p PartType) String() string {
+	return GUIDToString(GUID(p))
 }
 
 // FreeSpace indicates a free slot on the disk with a Start and End offset,
