@@ -1,12 +1,14 @@
 package disko_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/anuvu/disko"
+	"github.com/anuvu/disko/partid"
 )
 
 func TestFreeSpaceSize(t *testing.T) {
@@ -139,5 +141,70 @@ func TestAttachmentTypeString(t *testing.T) {
 			t.Errorf("disko.AttachmentType(%d).String() found %s, expected %s",
 				d.dtype, found, d.expected)
 		}
+	}
+}
+
+func TestPartitionSerializeJson(t *testing.T) {
+	// For readability, Partition serializes ID and Type to string GUIDs
+	// Test that they get there.
+	myIDStr := "01234567-89AB-CDEF-0123-456789ABCDEF"
+	myID, _ := disko.StringToGUID(myIDStr)
+	p := disko.Partition{
+		Start:  3 * disko.Mebibyte, //nolint:gomnd
+		End:    253*disko.Mebibyte - 1,
+		ID:     myID,
+		Type:   partid.EFI,
+		Name:   "my system part",
+		Number: 1,
+	}
+
+	jbytes, err := json.MarshalIndent(&p, "", "  ")
+	if err != nil {
+		t.Errorf("Failed to marshal %#v: %s", p, err)
+	}
+
+	jstr := string(jbytes)
+	if !strings.Contains(jstr, myIDStr) {
+		t.Errorf("Did not find string ID '%s' in json: %s", myIDStr, jstr)
+	}
+
+	typeStr := disko.GUIDToString(disko.GUID(partid.EFI))
+	if !strings.Contains(jstr, typeStr) {
+		t.Errorf("Did not find string Type '%s' in json: %s", myIDStr, jstr)
+	}
+
+	fmt.Printf("%s\n", jstr)
+}
+
+func TestPartitionUnserializeJson(t *testing.T) {
+	myIDStr := "01234567-89AB-CDEF-0123-456789ABCDEF"
+	myID, _ := disko.StringToGUID(myIDStr)
+	jbytes := []byte(`{
+  "start": 3145728,
+  "end": 265289727,
+  "id": "01234567-89AB-CDEF-0123-456789ABCDEF",
+  "type": "C12A7328-F81F-11D2-BA4B-00A0C93EC93B",
+  "name": "my system part",
+  "number": 1
+}`)
+
+	found := disko.Partition{}
+
+	err := json.Unmarshal(jbytes, &found)
+	if err != nil {
+		t.Errorf("Failed Unmarshal of bytes to Partition: %s", err)
+	}
+
+	expected := disko.Partition{
+		Start:  3 * disko.Mebibyte,     // nolint:gomnd
+		End:    253*disko.Mebibyte - 1, // nolint:gomnd
+		ID:     myID,
+		Type:   partid.EFI,
+		Name:   "my system part",
+		Number: 1,
+	}
+
+	if expected != found {
+		t.Errorf("Objects differed. got %#v expected %#v\n", found, expected)
 	}
 }
