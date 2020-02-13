@@ -67,7 +67,7 @@ func TestSystem(t *testing.T) {
 			}
 			partition := disko.Partition{
 				Start:  0,
-				End:    10000,
+				Last:   10000,
 				ID:     myID,
 				Type:   partid.LinuxFS,
 				Name:   "sda1",
@@ -115,7 +115,7 @@ func TestSystem(t *testing.T) {
 			}
 			partition := disko.Partition{
 				Start:  0,
-				End:    10000,
+				Last:   10000,
 				ID:     myID,
 				Type:   partid.LinuxFS,
 				Name:   "partition1",

@@ -110,7 +110,7 @@ func (d *Disk) FreeSpacesWithMin(minSize uint64) []FreeSpace {
 	used := uRanges{{0, 1*Mebibyte - 1}, {end, d.Size}}
 
 	for _, p := range d.Partitions {
-		used = append(used, uRange{p.Start, p.End})
+		used = append(used, uRange{p.Start, p.Last})
 	}
 
 	avail := []FreeSpace{}
@@ -172,20 +172,20 @@ func (d Disk) Details() string {
 	mbo := func(n uint64) string { return mbsize(n, 0) }
 	mbe := func(n uint64) string { return mbsize(n, 1) }
 	lfmt := "[%2s  %10s %10s %10s %-16s]\n"
-	buf := fmt.Sprintf(lfmt, "#", "Start", "End", "Size", "Name")
+	buf := fmt.Sprintf(lfmt, "#", "Start", "Last", "Size", "Name")
 
 	for _, p := range d.Partitions {
 		if fsn < len(fss) && fss[fsn].Start < p.Start {
-			buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].End), mbo(fss[fsn].Size()), "<free>")
+			buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].Last), mbo(fss[fsn].Size()), "<free>")
 			fsn++
 		}
 
 		buf += fmt.Sprintf(lfmt,
-			fmt.Sprintf("%d", p.Number), mbo(p.Start), mbe(p.End), mbo(p.Size()), p.Name)
+			fmt.Sprintf("%d", p.Number), mbo(p.Start), mbe(p.Last), mbo(p.Size()), p.Name)
 	}
 
 	if fsn < len(fss) {
-		buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].End), mbo(fss[fsn].Size()), "<free>")
+		buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].Last), mbo(fss[fsn].Size()), "<free>")
 	}
 
 	return buf
@@ -211,11 +211,11 @@ type PartitionSet map[uint]Partition
 
 // Partition wraps the disk partition information.
 type Partition struct {
-	// Start is the start offset of the disk partition.
+	// Start is the offset in bytes of the start of this partition.
 	Start uint64 `json:"start"`
 
-	// End is the end offset of the disk partition.
-	End uint64 `json:"end"`
+	// Last is the last byte that is part of this partition.
+	Last uint64 `json:"last"`
 
 	// ID is the partition id.
 	ID GUID `json:"id"`
@@ -232,13 +232,13 @@ type Partition struct {
 
 // Size returns the size of the partition in bytes.
 func (p *Partition) Size() uint64 {
-	return p.End - p.Start + 1
+	return p.Last - p.Start + 1
 }
 
 // jPartition - Partition, but for json (ids are strings)
 type jPartition struct {
 	Start  uint64 `json:"start"`
-	End    uint64 `json:"end"`
+	Last   uint64 `json:"last"`
 	ID     string `json:"id"`
 	Type   string `json:"type"`
 	Name   string `json:"name"`
@@ -265,7 +265,7 @@ func (p *Partition) UnmarshalJSON(b []byte) error {
 	}
 
 	p.Start = j.Start
-	p.End = j.End
+	p.Last = j.Last
 	p.ID = id
 	p.Type = PartType(ptype)
 	p.Name = j.Name
@@ -278,7 +278,7 @@ func (p *Partition) UnmarshalJSON(b []byte) error {
 func (p *Partition) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&jPartition{
 		Start:  p.Start,
-		End:    p.End,
+		Last:   p.Last,
 		ID:     p.ID.String(),
 		Type:   p.Type.String(),
 		Name:   p.Name,
@@ -290,14 +290,14 @@ func (p PartType) String() string {
 	return GUIDToString(GUID(p))
 }
 
-// FreeSpace indicates a free slot on the disk with a Start and End offset,
-// where a partition can be craeted.
+// FreeSpace indicates a free slot on the disk with a Start and Last offset,
+// where a partition can be created.
 type FreeSpace struct {
 	Start uint64 `json:"start"`
-	End   uint64 `json:"end"`
+	Last  uint64 `json:"last"`
 }
 
 // Size returns the size of the free space, which is End - Start.
 func (f *FreeSpace) Size() uint64 {
-	return f.End - f.Start + 1
+	return f.Last - f.Start + 1
 }

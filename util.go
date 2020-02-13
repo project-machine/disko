@@ -6,11 +6,11 @@ import (
 )
 
 type uRange struct {
-	Start, End uint64
+	Start, Last uint64
 }
 
 func (r *uRange) Size() uint64 {
-	return r.End - r.Start
+	return r.Last - r.Start + 1
 }
 
 type uRanges []uRange
@@ -33,25 +33,25 @@ func findRangeGaps(ranges uRanges, min, max uint64) uRanges {
 	for _, i := range ranges {
 		for r := 0; r < len(ret); r++ {
 			// 5 cases:
-			if i.Start > ret[r].End || i.End < ret[r].Start {
+			if i.Start > ret[r].Last || i.Last < ret[r].Start {
 				// a. i has no overlap
-			} else if i.Start <= ret[r].Start && i.End >= ret[r].End {
+			} else if i.Start <= ret[r].Start && i.Last >= ret[r].Last {
 				// b.) i is complete superset, so remove ret[r]
 				ret = append(ret[:r], ret[r+1:]...)
 				r--
-			} else if i.Start > ret[r].Start && i.End < ret[r].End {
+			} else if i.Start > ret[r].Start && i.Last < ret[r].Last {
 				// c.) i is strict subset: split ret[r]
 				ret = append(
-					append(ret[:r+1], uRange{i.End + 1, ret[r].End}),
+					append(ret[:r+1], uRange{i.Last + 1, ret[r].Last}),
 					ret[r+1:]...)
-				ret[r].End = i.Start - 1
+				ret[r].Last = i.Start - 1
 				r++ // added entry is guaranteed to be 'a', so skip it.
 			} else if i.Start <= ret[r].Start {
 				// d.) overlap left edge to middle
-				ret[r].Start = i.End + 1
-			} else if i.Start <= ret[r].End {
+				ret[r].Start = i.Last + 1
+			} else if i.Start <= ret[r].Last {
 				// e.) middle to right edge (possibly past).
-				ret[r].End = i.Start - 1
+				ret[r].Last = i.Start - 1
 			} else {
 				panic(fmt.Sprintf("Error in findRangeGaps: %v, r=%d, ret=%v",
 					i, r, ret))
