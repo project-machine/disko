@@ -54,7 +54,7 @@ func TestVG(t *testing.T) {
 				Name:   name,
 				Number: 1,
 				Start:  0,
-				End:    d.Size,
+				Last:   d.Size,
 				Type:   partid.LinuxFS,
 			})
 

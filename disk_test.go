@@ -12,14 +12,14 @@ import (
 )
 
 func TestFreeSpaceSize(t *testing.T) {
-	values := []struct{ start, end, expected uint64 }{
+	values := []struct{ start, last, expected uint64 }{
 		{0, 9, 10},
 		{0, 199, 200},
 		{100, 200, 101},
 	}
 
 	for _, v := range values {
-		f := disko.FreeSpace{v.start, v.end}
+		f := disko.FreeSpace{v.start, v.last}
 		found := f.Size()
 
 		if v.expected != found {
@@ -30,13 +30,13 @@ func TestFreeSpaceSize(t *testing.T) {
 }
 
 func TestPartitionSize(t *testing.T) {
-	tables := []struct{ start, end, expected uint64 }{
+	tables := []struct{ start, last, expected uint64 }{
 		{0, 99, 100},
 		{3 * disko.Mebibyte, (5000+3)*disko.Mebibyte - 1, 5000 * disko.Mebibyte},
 	}
 
 	for _, table := range tables {
-		p := disko.Partition{Start: table.start, End: table.end}
+		p := disko.Partition{Start: table.start, Last: table.last}
 		found := p.Size()
 
 		if table.expected != found {
@@ -57,8 +57,8 @@ func TestDiskString(t *testing.T) {
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 		Partitions: disko.PartitionSet{
-			1: {Start: 3 * mib, End: 253*mib - 1, Number: 1},   //nolint: gomnd
-			3: {Start: 500 * mib, End: 600*mib - 1, Number: 3}, //nolint: gomnd
+			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1},   //nolint: gomnd
+			3: {Start: 500 * mib, Last: 600*mib - 1, Number: 3}, //nolint: gomnd
 		},
 		UdevInfo: disko.UdevInfo{},
 	}
@@ -87,12 +87,12 @@ func TestDiskDetails(t *testing.T) {
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 		Partitions: disko.PartitionSet{
-			1: {Start: 3 * mib, End: 253*mib - 1, Number: 1}, //nolint: gomnd
+			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1}, //nolint: gomnd
 		},
 		UdevInfo: disko.UdevInfo{},
 	}
 	expected := `
-[ # Start End Size Name ]
+[ # Start Last Size Name ]
 [ 1 3 MiB 253 MiB 250 MiB                 ]
 [ - 253 MiB 1048575 MiB 1048322 MiB <free> ]`
 
@@ -151,7 +151,7 @@ func TestPartitionSerializeJson(t *testing.T) {
 	myID, _ := disko.StringToGUID(myIDStr)
 	p := disko.Partition{
 		Start:  3 * disko.Mebibyte, //nolint:gomnd
-		End:    253*disko.Mebibyte - 1,
+		Last:   253*disko.Mebibyte - 1,
 		ID:     myID,
 		Type:   partid.EFI,
 		Name:   "my system part",
@@ -181,7 +181,7 @@ func TestPartitionUnserializeJson(t *testing.T) {
 	myID, _ := disko.StringToGUID(myIDStr)
 	jbytes := []byte(`{
   "start": 3145728,
-  "end": 265289727,
+  "last": 265289727,
   "id": "01234567-89AB-CDEF-0123-456789ABCDEF",
   "type": "C12A7328-F81F-11D2-BA4B-00A0C93EC93B",
   "name": "my system part",
@@ -197,7 +197,7 @@ func TestPartitionUnserializeJson(t *testing.T) {
 
 	expected := disko.Partition{
 		Start:  3 * disko.Mebibyte,     // nolint:gomnd
-		End:    253*disko.Mebibyte - 1, // nolint:gomnd
+		Last:   253*disko.Mebibyte - 1, // nolint:gomnd
 		ID:     myID,
 		Type:   partid.EFI,
 		Name:   "my system part",
