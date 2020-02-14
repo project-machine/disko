@@ -144,7 +144,7 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 }
 
 func (ls *linuxSystem) CreatePartition(d disko.Disk, p disko.Partition) error {
-	return nil
+	return addPartitionSet(d, disko.PartitionSet{p.Number: p})
 }
 
 func (ls *linuxSystem) DeletePartition(d disko.Disk, number uint) error {
