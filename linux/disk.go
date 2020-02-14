@@ -89,45 +89,49 @@ func getAttachType(udInfo disko.UdevInfo) disko.AttachmentType {
 	return attach
 }
 
-func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
-	var err error
-
-	parts := disko.PartitionSet{}
-	ssize := uint64(sectorSize512)
-	size4k := uint64(sectorSize4k)
-
-	if _, err := fp.Seek(int64(ssize), io.SeekStart); err != nil {
-		return parts, uint(ssize), err
-	}
-
+func readTableSearch(fp io.ReadSeeker, sizes []uint) (gpt.Table, uint, error) {
+	const noGptFound = "Bad GPT signature"
 	var gptTable gpt.Table
-	var noGptFound = "Bad GPT signature"
+	var err error
+	var size uint
 
-	gptTable, err = gpt.ReadTable(fp, ssize)
-	if err != nil {
-		if err.Error() != noGptFound {
-			return parts, uint(ssize), err
+	for _, size = range sizes {
+		// consider seek failure to be fatal
+		if _, err := fp.Seek(int64(size), io.SeekStart); err != nil {
+			return gpt.Table{}, size, err
 		}
 
-		// No GPT with 512, try for a 4096 byte sector size.
-		var err4k error
-
-		if _, err4k = fp.Seek(int64(size4k), io.SeekStart); err4k == nil {
-			gptTable, err4k = gpt.ReadTable(fp, size4k)
-		}
-
-		if err4k != nil {
-			if err4k.Error() == noGptFound {
-				return parts, uint(ssize), ErrNoPartitionTable
+		if gptTable, err = gpt.ReadTable(fp, uint64(size)); err != nil {
+			if err.Error() == noGptFound {
+				continue
 			}
 
-			return parts, uint(size4k), err4k
+			return gpt.Table{}, size, err
 		}
 
-		ssize = size4k
+		return gptTable, size, nil
 	}
 
-	max := gptTable.Header.FirstUsableLBA
+	return gpt.Table{}, size, ErrNoPartitionTable
+}
+
+func readTable(fp io.ReadSeeker) (gpt.Table, uint, error) {
+	return readTableSearch(fp, []uint{sectorSize512, sectorSize4k})
+}
+
+func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
+	var err error
+	var ssize uint
+	var gptTable gpt.Table
+
+	parts := disko.PartitionSet{}
+
+	gptTable, ssize, err = readTable(fp)
+	if err != nil {
+		return parts, ssize, ErrNoPartitionTable
+	}
+
+	ssize64 := uint64(ssize)
 
 	for n, p := range gptTable.Partitions {
 		if p.IsEmpty() {
@@ -135,21 +139,17 @@ func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
 		}
 
 		part := disko.Partition{
-			Start:  p.FirstLBA * ssize,
-			Last:   p.LastLBA*ssize + ssize - 1,
+			Start:  p.FirstLBA * ssize64,
+			Last:   p.LastLBA*ssize64 + ssize64 - 1,
 			ID:     disko.GUID(p.Id),
 			Type:   disko.PartType(p.Type),
 			Name:   p.Name(),
 			Number: uint(n + 1),
 		}
 		parts[part.Number] = part
-
-		if p.LastLBA > max {
-			max = p.LastLBA
-		}
 	}
 
-	return parts, uint(ssize), nil
+	return parts, ssize, nil
 }
 
 func getDiskNames() ([]string, error) {
