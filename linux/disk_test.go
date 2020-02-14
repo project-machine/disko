@@ -3,9 +3,13 @@
 package linux
 
 import (
+	"io/ioutil"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/anuvu/disko"
+	"github.com/anuvu/disko/partid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,4 +64,74 @@ func TestGetAttachType(t *testing.T) {
 			Symlinks: []string{"disk/by-id/nvme-SPCC_M.2_PCIe_SSD_BD52079C067D00486555",
 				"disk/by-id/nvme-eui.6479a72be0043535"},
 		}))
+}
+
+func TestMyPartition(t *testing.T) {
+	tmpd, err := ioutil.TempDir("", "disko_test")
+	if err != nil {
+		t.Fatalf("Failed to create tempdir: %s", err)
+	}
+
+	defer os.RemoveAll(tmpd)
+
+	fpath := path.Join(tmpd, "mydisk")
+	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd (200MiB)
+
+	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
+		t.Fatalf("Failed to write to a temp file: %s", err)
+	}
+
+	if err := os.Truncate(fpath, int64(fsize)); err != nil {
+		t.Fatalf("Failed create empty file: %s", err)
+	}
+
+	disk := disko.Disk{
+		Name:       "mydisk",
+		Path:       fpath,
+		Size:       fsize,
+		SectorSize: sectorSize512,
+	}
+
+	fs := disk.FreeSpaces()
+	if len(fs) != 1 {
+		t.Errorf("Expected 1 free space, found %d", fs)
+	}
+
+	myGUID := disko.GenGUID()
+
+	part := disko.Partition{
+		Start:  fs[0].Start,
+		Last:   fs[0].Last,
+		Type:   partid.LinuxLVM,
+		Name:   "mytest partition",
+		ID:     myGUID,
+		Number: uint(1),
+	}
+
+	err = addPartitionSet(disk, disko.PartitionSet{part.Number: part})
+	if err != nil {
+		t.Errorf("Creation of partition failed: %s", err)
+	}
+
+	fp, err := os.Open(fpath)
+	if err != nil {
+		t.Fatalf("Failed to open file after writing it: %s", err)
+	}
+
+	pSet, ssize, err := findPartitions(fp)
+	if err != nil {
+		t.Errorf("Failed to findPartitions on %s: %s", fpath, err)
+	}
+
+	if len(pSet) != 1 {
+		t.Errorf("There were %d partitions, expected 1", len(pSet))
+	}
+
+	if sectorSize512 != ssize {
+		t.Errorf("Expected size %d, found %d", sectorSize512, ssize)
+	}
+
+	if pSet[1].ID != myGUID {
+		t.Errorf("Guid = %s, not %s", pSet[1].ID.String(), myGUID.String())
+	}
 }

@@ -262,6 +262,8 @@ func getPartName(s string) [72]byte {
 	return b
 }
 
+// addPartitionSet - open the disk, add partitions.
+//     Caller's responsibility to udevSettle
 func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
 	if err != nil {
@@ -295,9 +297,7 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 
 	// close the file handle, releasing the lock before calling udevSettle
 	// https://systemd.io/BLOCK_DEVICE_LOCKING/
-	fp.Close()
-
-	return udevSettle()
+	return fp.Close()
 }
 
 // writeProtectiveMBR - add a ProtectiveMBR spanning the disk.
@@ -375,7 +375,9 @@ func newProtectiveMBR(buf []byte, sectorSize uint, diskSize uint64) (mbr.MBR, er
 	pt := myMBR.GetPartition(1)
 	pt.SetType(mbr.PART_GPT)
 	pt.SetLBAStart(1)
-	pt.SetLBALen(uint32(diskSize/uint64(sectorSize)) - 1)
+	// Upstream pull request would set this to '- 1', not '- 2' as
+	// is commonly written by linux partitioners although actually outside spec.
+	pt.SetLBALen(uint32(diskSize/uint64(sectorSize)) - 2) // nolint: gomnd
 
 	for pnum := 2; pnum <= 4; pnum++ {
 		pt := myMBR.GetPartition(pnum)
