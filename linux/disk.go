@@ -48,7 +48,7 @@ func toGPTPartition(p disko.Partition, sectorSize uint) gpt.Partition {
 func getDiskType(udInfo disko.UdevInfo) (disko.DiskType, error) {
 	var kname = udInfo.Name
 
-	if strings.HasPrefix("nvme", kname) {
+	if strings.HasPrefix(kname, "nvme") {
 		return disko.NVME, nil
 	}
 
@@ -59,7 +59,7 @@ func getDiskType(udInfo disko.UdevInfo) (disko.DiskType, error) {
 		}
 	}
 
-	bd, err := getPartitionsBlockDevice(kname)
+	bd, err := getPartitionsBlockDevice(path.Join("/dev", kname))
 	if err != nil {
 		return disko.HDD, nil
 	}
