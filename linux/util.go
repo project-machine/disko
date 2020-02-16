@@ -148,7 +148,7 @@ func runCommandStdin(input string, args ...string) error {
 }
 
 func udevSettle() error {
-	return runCommand("udevamd", "settle")
+	return runCommand("udevadm", "settle")
 }
 
 func runCommandSettled(args ...string) error {
