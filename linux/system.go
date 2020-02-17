@@ -152,7 +152,11 @@ func (ls *linuxSystem) CreatePartition(d disko.Disk, p disko.Partition) error {
 }
 
 func (ls *linuxSystem) DeletePartition(d disko.Disk, number uint) error {
-	return nil
+	if err := deletePartitions(d, []uint{number}); err != nil {
+		return err
+	}
+
+	return udevSettle()
 }
 
 func (ls *linuxSystem) Wipe(d disko.Disk) error {

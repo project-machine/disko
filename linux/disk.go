@@ -17,6 +17,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/anuvu/disko"
+	"github.com/anuvu/disko/partid"
 	"github.com/rekby/gpt"
 	"github.com/rekby/mbr"
 	"golang.org/x/sys/unix"
@@ -298,6 +299,39 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 	// close the file handle, releasing the lock before calling udevSettle
 	// https://systemd.io/BLOCK_DEVICE_LOCKING/
 	return fp.Close()
+}
+
+func deletePartitions(d disko.Disk, pNums []uint) error {
+	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	if err := syscall.Flock(int(fp.Fd()), unix.LOCK_EX); err != nil {
+		return fmt.Errorf("failed to lock %s: %s", d.Path, err)
+	}
+
+	gptTable, _, err := readTableSearch(fp, []uint{d.SectorSize})
+	if err != nil {
+		return err
+	}
+
+	emptyPart := toGPTPartition(
+		disko.Partition{
+			Start: 0,
+			Last:  0,
+			ID:    disko.GUID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+			Type:  partid.Empty,
+		}, d.SectorSize)
+
+	for _, pNum := range pNums {
+		gptTable.Partitions[pNum-1] = emptyPart
+	}
+
+	_, err = writeGPTTable(fp, gptTable)
+
+	return err
 }
 
 // writeProtectiveMBR - add a ProtectiveMBR spanning the disk.
