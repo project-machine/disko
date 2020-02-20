@@ -264,6 +264,7 @@ func (lvm *mockLVM) CreateLV(vgName string, name string, size uint64,
 		Name:      name,
 		Size:      size,
 		Type:      lvType,
+		VGName:    vgName,
 		Encrypted: false,
 	}
 
