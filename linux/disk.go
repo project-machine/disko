@@ -36,8 +36,8 @@ func toGPTPartition(p disko.Partition, sectorSize uint) gpt.Partition {
 	return gpt.Partition{
 		Type:          gpt.PartType(p.Type),
 		Id:            gpt.Guid(p.ID),
-		FirstLBA:      Floor(p.Start, uint64(sectorSize)),
-		LastLBA:       Floor(p.Last, uint64(sectorSize)),
+		FirstLBA:      Floor(p.Start, uint64(sectorSize)) / uint64(sectorSize),
+		LastLBA:       Floor(p.Last, uint64(sectorSize)) / uint64(sectorSize),
 		Flags:         gpt.Flags{},
 		PartNameUTF16: getPartName(p.Name),
 		TrailingBytes: []byte{},
