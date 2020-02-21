@@ -9,6 +9,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rekby/gpt v0.0.0-20190209220743-520ac65554cf h1:cFRSGvObVNqtA4pnu8Y/0CWxc4WFvfssCVTrslH/yg4=
 github.com/rekby/gpt v0.0.0-20190209220743-520ac65554cf/go.mod h1:scrOqOnnHVKCHENvFw8k9ajCb88uqLQDA4BvuJNJ2ew=
+github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc h1:goZGTwEEn8mWLcY012VouWZWkJ8GrXm9tS3VORMxT90=
+github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc/go.mod h1:scrOqOnnHVKCHENvFw8k9ajCb88uqLQDA4BvuJNJ2ew=
 github.com/rekby/mbr v0.0.0-20190325193910-2b19b9cdeebc h1:LIhcsQ01OzuCmjqcggpWhs8GBGNqVPycFbBpY3suBbI=
 github.com/rekby/mbr v0.0.0-20190325193910-2b19b9cdeebc/go.mod h1:omSwqul59wlKxf3OVbxhOiSjxM1at3GsfDbgnghKyeA=
 github.com/satori/go.uuid v1.2.0 h1:0uYX9dsZ2yD7q2RtLRtPSdGDWzjeM3TbMJP9utgA0ww=

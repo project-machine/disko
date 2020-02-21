@@ -359,8 +359,10 @@ func writeProtectiveMBR(fp io.ReadWriteSeeker, sectorSize uint, diskSize uint64)
 }
 
 func writeNewGPTTable(fp io.ReadWriteSeeker, sectorSize uint, diskSize uint64) (gpt.Table, error) {
-	guid := disko.GenGUID()
-	gptTable := newGPTTable(sectorSize, diskSize, guid)
+	ntArgs := gpt.NewTableArgs{
+		SectorSize: uint64(sectorSize),
+		DiskGuid:   gpt.Guid(disko.GenGUID())}
+	gptTable := gpt.NewTable(diskSize, &ntArgs)
 
 	if err := writeProtectiveMBR(fp, sectorSize, diskSize); err != nil {
 		return gptTable, err
@@ -421,37 +423,4 @@ func newProtectiveMBR(buf []byte, sectorSize uint, diskSize uint64) (mbr.MBR, er
 	}
 
 	return *myMBR, myMBR.Check()
-}
-
-// newGPTTable - return a valid empty Table for given sectorSize and diskSize
-//  pull request for gpt inclusion at https://github.com/rekby/gpt/pull/6
-func newGPTTable(sectorSize32 uint, diskSize uint64, diskGUID disko.GUID) gpt.Table {
-	// CreateTableForNewdiskSize will update HeaderCopyStartLBA, LastUsableLBA, and CRC
-	numParts := 128
-	var sectorSize = uint64(sectorSize32)
-	var standardHeaderSize uint32 = 92   // Size of standard GPT-header in bytes
-	var standardPartitionEntrySize = 128 // Size of standard GPT-partition entry in bytes
-	var firstLBA uint64 = 34
-
-	return gpt.Table{
-		SectorSize: sectorSize,
-		Header: gpt.Header{
-			Signature:               [8]byte{0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52, 0x54},
-			Revision:                0x10000, // nolint:gomnd
-			Size:                    standardHeaderSize,
-			CRC:                     0,
-			Reserved:                0,
-			HeaderStartLBA:          1,
-			HeaderCopyStartLBA:      0,
-			FirstUsableLBA:          firstLBA, // nolint:gomnd
-			LastUsableLBA:           0,
-			DiskGUID:                gpt.Guid(diskGUID),
-			PartitionsTableStartLBA: 2, // nolint:gomnd
-			PartitionsArrLen:        uint32(numParts),
-			PartitionEntrySize:      uint32(standardPartitionEntrySize),
-			PartitionsCRC:           0,
-			TrailingBytes:           make([]byte, sectorSize-uint64(standardHeaderSize)),
-		},
-		Partitions: make([]gpt.Partition, numParts),
-	}.CreateTableForNewDiskSize(diskSize / sectorSize)
 }
