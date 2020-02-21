@@ -69,7 +69,7 @@ func TestGetAttachType(t *testing.T) {
 
 func genTempGptDisk(tmpd string) (disko.Disk, error) {
 	fpath := path.Join(tmpd, "mydisk")
-	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd (200MiB)
+	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd
 
 	disk := disko.Disk{
 		Name:       "mydisk",
@@ -116,7 +116,7 @@ func TestMyPartition(t *testing.T) {
 	defer os.RemoveAll(tmpd)
 
 	fpath := path.Join(tmpd, "mydisk")
-	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd (200MiB)
+	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd
 
 	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
