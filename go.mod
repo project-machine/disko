@@ -9,5 +9,6 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.4.0
+	github.com/urfave/cli/v2 v2.1.1
 	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
 )
