@@ -261,6 +261,48 @@ func getPartName(s string) [72]byte {
 	return b
 }
 
+// zeroStartEnd - zero the start and end provided with 1MiB bytes of zeros.
+func zeroStartEnd(fp io.WriteSeeker, start int64, last int64) error {
+	if last <= start {
+		return fmt.Errorf("last %d < start %d", last, start)
+	}
+
+	wlen := int64(disko.Mebibyte)
+	bufZero := make([]byte, wlen)
+
+	// 3 cases.
+	// a.) start + wlen < last - wlen (two full writes)
+	// b.) start + wlen >= last (one possibly short write)
+	// c.) start + wlen >= last - wlen (overlapping zero ranges)
+	type ws struct{ start, size int64 }
+	var writes = []ws{{start, wlen}, {last - wlen, wlen}}
+	var wnum int
+	var err error
+
+	if start+wlen >= last {
+		writes = []ws{{start, last - start}}
+	} else if start+wlen >= last-wlen {
+		writes = []ws{{start, wlen}, {start + wlen, last - (start + wlen)}}
+	}
+
+	for _, w := range writes {
+		if _, err = fp.Seek(w.start, io.SeekStart); err != nil {
+			return fmt.Errorf("failed to seek to %d to write %v", w.start, w)
+		}
+
+		wnum, err = fp.Write(bufZero[:w.size])
+		if err != nil {
+			return fmt.Errorf("failed to write %v", w)
+		}
+
+		if int64(wnum) != w.size {
+			return fmt.Errorf("wrote only %d bytes of %v", wnum, w)
+		}
+	}
+
+	return nil
+}
+
 // addPartitionSet - open the disk, add partitions.
 //     Caller's responsibility to udevSettle
 func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
@@ -286,6 +328,10 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 
 	for _, p := range pSet {
 		gptTable.Partitions[p.Number-1] = toGPTPartition(p, d.SectorSize)
+
+		if err := zeroStartEnd(fp, int64(p.Start), int64(p.Last)); err != nil {
+			return fmt.Errorf("failed to zero partition %d: %s", p.ID, err)
+		}
 	}
 
 	_, err = writeGPTTable(fp, gptTable)
