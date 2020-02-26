@@ -208,3 +208,73 @@ func TestPartitionUnserializeJson(t *testing.T) {
 		t.Errorf("Objects differed. got %#v expected %#v\n", found, expected)
 	}
 }
+
+func TestDiskSerializeJson(t *testing.T) {
+	// For readability, Partition serializes ID and Type to string GUIDs
+	// Test that they get there.
+	d := disko.Disk{
+		Name:       "sda",
+		Path:       "/dev/sda",
+		Size:       500 * disko.Mebibyte, //nolint:gomnd
+		SectorSize: 512,                  //nolint:gomnd
+		Type:       disko.HDD,
+		Attachment: disko.ATA,
+	}
+
+	jbytes, err := json.MarshalIndent(&d, "", "  ")
+	if err != nil {
+		t.Errorf("Failed to marshal %#v: %s", d, err)
+	}
+
+	jstr := string(jbytes)
+	if !strings.Contains(jstr, "HDD") {
+		t.Errorf("Did not find string 'HDD' in json: %s", jstr)
+	}
+}
+
+func compareDisk(a *disko.Disk, b *disko.Disk) bool {
+	return (a.Name == b.Name &&
+		a.Path == b.Path &&
+		a.Size == b.Size &&
+		a.SectorSize == b.SectorSize &&
+		a.Type == b.Type &&
+		a.Attachment == b.Attachment)
+}
+
+func TestDiskUnserializeJson(t *testing.T) {
+	expected := disko.Disk{
+		Name:       "sda",
+		Path:       "/dev/sda",
+		Size:       500 * disko.Mebibyte, //nolint:gomnd
+		SectorSize: 512,                  //nolint:gomnd
+		Type:       disko.HDD,
+		Attachment: disko.ATA,
+	}
+
+	for _, jbytes := range [][]byte{
+		[]byte(`{
+  "name": "sda",
+  "path": "/dev/sda",
+  "size": 524288000,
+  "sectorSize": 512,
+  "type": "HDD",
+  "attachment": "ATA"}`),
+		[]byte(`{
+  "name": "sda",
+  "path": "/dev/sda",
+  "size": 524288000,
+  "sectorSize": 512,
+  "type": 0,
+  "attachment": 3}`)} {
+		found := disko.Disk{}
+		err := json.Unmarshal(jbytes, &found)
+
+		if err != nil {
+			t.Errorf("Failed Unmarshal of bytes to Disk: %s", err)
+		}
+
+		if !compareDisk(&found, &expected) {
+			t.Errorf("Objects differed. got %#v expected %#v\n", found, expected)
+		}
+	}
+}

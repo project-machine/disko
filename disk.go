@@ -23,6 +23,48 @@ func (t DiskType) String() string {
 	return []string{"HDD", "SSD", "NVME"}[t]
 }
 
+// StringToDiskType - convert a string to a disk type.
+func StringToDiskType(typeStr string) DiskType {
+	kmap := map[string]DiskType{
+		"HDD":  HDD,
+		"SSD":  SSD,
+		"NVME": NVME,
+	}
+	if dtype, ok := kmap[typeStr]; ok {
+		return dtype
+	}
+
+	return HDD
+}
+
+// MarshalJSON - Custom to marshal as a string.
+func (t *DiskType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
+
+// UnmarshalJSON - custom to read as string or int.
+func (t *DiskType) UnmarshalJSON(b []byte) error {
+	var err error
+	var asStr string
+	var asInt int
+
+	err = json.Unmarshal(b, &asInt)
+	if err == nil {
+		*t = DiskType(asInt)
+		return nil
+	}
+
+	err = json.Unmarshal(b, &asStr)
+	if err != nil {
+		return err
+	}
+
+	dtype := StringToDiskType(asStr)
+	*t = dtype
+
+	return nil
+}
+
 // AttachmentType enumerates the type of device to which the disks are
 // attached to in the system.
 type AttachmentType int
@@ -56,6 +98,53 @@ const (
 func (t AttachmentType) String() string {
 	return []string{"UNKNOWN", "RAID", "SCSI", "ATA", "PCIE", "USB",
 		"VIRTIO", "IDE"}[t]
+}
+
+// StringToAttachmentType - Convert a string to an AttachmentType
+func StringToAttachmentType(atypeStr string) AttachmentType {
+	kmap := map[string]AttachmentType{
+		"UNKNOWN": UnknownAttach,
+		"RAID":    RAID,
+		"SCSI":    SCSI,
+		"ATA":     ATA,
+		"PCIE":    PCIE,
+		"VIRTIO":  VIRTIO,
+		"IDE":     IDE,
+	}
+
+	if atype, ok := kmap[atypeStr]; ok {
+		return atype
+	}
+
+	return UnknownAttach
+}
+
+// MarshalJSON - Custom to marshal as a string.
+func (t *AttachmentType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
+
+// UnmarshalJSON - reverse of the custom marshler
+func (t *AttachmentType) UnmarshalJSON(b []byte) error {
+	var err error
+	var asStr string
+	var asInt int
+
+	err = json.Unmarshal(b, &asInt)
+	if err == nil {
+		*t = AttachmentType(asInt)
+		return nil
+	}
+
+	err = json.Unmarshal(b, &asStr)
+	if err != nil {
+		return err
+	}
+
+	dtype := StringToAttachmentType(asStr)
+	*t = dtype
+
+	return nil
 }
 
 // PartType represents a GPT Partition GUID
