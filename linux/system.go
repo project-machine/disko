@@ -158,5 +158,9 @@ func (ls *linuxSystem) DeletePartition(d disko.Disk, number uint) error {
 }
 
 func (ls *linuxSystem) Wipe(d disko.Disk) error {
-	return nil
+	if err := zeroPathStartEnd(d.Path, int64(0), int64(d.Size)); err != nil {
+		return err
+	}
+
+	return udevSettle()
 }

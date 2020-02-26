@@ -261,6 +261,16 @@ func getPartName(s string) [72]byte {
 	return b
 }
 
+func zeroPathStartEnd(fpath string, start int64, last int64) error {
+	fp, err := os.OpenFile(fpath, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	return zeroStartEnd(fp, start, last)
+}
+
 // zeroStartEnd - zero the start and end provided with 1MiB bytes of zeros.
 func zeroStartEnd(fp io.WriteSeeker, start int64, last int64) error {
 	if last <= start {
