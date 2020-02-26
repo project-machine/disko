@@ -107,7 +107,7 @@ func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
 func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
 	nilPV := disko.PV{}
 
-	err := runCommandSettled("lvm", "pvcreate", name)
+	err := runCommandSettled("lvm", "pvcreate", "--zero=y", name)
 
 	if err != nil {
 		return nilPV, err
@@ -140,7 +140,7 @@ func (ls *linuxLVM) HasPV(name string) bool {
 }
 
 func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
-	cmd := []string{"lvm", "vgcreate", name}
+	cmd := []string{"lvm", "vgcreate", "--zero=y", name}
 	for _, p := range pvs {
 		cmd = append(cmd, p.Path)
 	}
@@ -160,7 +160,7 @@ func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
 }
 
 func (ls *linuxLVM) ExtendVG(vgName string, pvs ...disko.PV) error {
-	cmd := []string{"lvm", "vgextend", vgName}
+	cmd := []string{"lvm", "vgextend", "--zero=y", vgName}
 	for _, p := range pvs {
 		cmd = append(cmd, p.Path)
 	}
@@ -219,6 +219,7 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 
 	err := runCommandSettled(
 		"lvm", "lvcreate", "--ignoremonitoring", "--yes", "--activate=y",
+		"--zero=y",
 		"--setactivationskip=n", fmt.Sprintf("--size=%dB", size),
 		fmt.Sprintf("--name=%s", name), vgName)
 
