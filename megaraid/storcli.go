@@ -8,6 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
+
+	"github.com/patrickmn/go-cache"
 )
 
 type storCli struct {
@@ -531,4 +534,37 @@ func getCommandErrorRCDefault(err error, rcError int) int {
 	}
 
 	return rcError
+}
+
+type cachingStorCli struct {
+	mr    MegaRaid
+	cache *cache.Cache
+}
+
+// CachingStorCli - just a cache for a MegaRaid
+func CachingStorCli() MegaRaid {
+	return &cachingStorCli{
+		mr:    &storCli{},
+		cache: cache.New(5*time.Minute, 5*time.Minute), //nolint: gomnd
+	}
+}
+
+func (csc *cachingStorCli) Query(cID int) (Controller, error) {
+	type qresult struct {
+		ctrl Controller
+		err  error
+	}
+
+	cacheName := fmt.Sprintf("query-%d", cID)
+	cached, found := csc.cache.Get(cacheName)
+
+	if found {
+		ret := cached.(qresult)
+		return ret.ctrl, ret.err
+	}
+
+	ctrl, err := csc.mr.Query(cID)
+	csc.cache.Set(cacheName, qresult{ctrl: ctrl, err: err}, cache.DefaultExpiration)
+
+	return ctrl, err
 }
