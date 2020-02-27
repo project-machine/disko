@@ -61,7 +61,7 @@ type DriveGroupSet map[int]*DriveGroup
 
 // MarshalJSON - serialize to json.  Custom Marshal to only reference Disks
 // by ID not by full dump.
-func (dgs *DriveGroupSet) MarshalJSON() ([]byte, error) {
+func (dgs DriveGroupSet) MarshalJSON() ([]byte, error) {
 	type terseDriveGroupSet struct {
 		ID     int
 		Drives []int
@@ -69,7 +69,7 @@ func (dgs *DriveGroupSet) MarshalJSON() ([]byte, error) {
 
 	var mySet = []terseDriveGroupSet{}
 
-	for id, driveSet := range *dgs {
+	for id, driveSet := range dgs {
 		drives := []int{}
 		for drive := range driveSet.Drives {
 			drives = append(drives, drive)
@@ -123,7 +123,7 @@ func (t MediaType) String() string {
 }
 
 // MarshalJSON for string output rather than int
-func (t *MediaType) MarshalJSON() ([]byte, error) {
+func (t MediaType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
