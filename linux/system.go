@@ -8,14 +8,18 @@ import (
 	"syscall"
 
 	"github.com/anuvu/disko"
+	"github.com/anuvu/disko/megaraid"
 )
 
 type linuxSystem struct {
+	megaraid megaraid.MegaRaid
 }
 
 // System returns an linux specific implementation of disko.System interface.
 func System() disko.System {
-	return &linuxSystem{}
+	return &linuxSystem{
+		megaraid: megaraid.CachingStorCli(),
+	}
 }
 
 func (ls *linuxSystem) ScanAllDisks(filter disko.DiskFilter) (disko.DiskSet, error) {
@@ -94,7 +98,7 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		return disko.Disk{}, err
 	}
 
-	diskType, err := getDiskType(udInfo)
+	diskType, err := ls.getDiskType(devicePath, udInfo)
 	if err != nil {
 		return disko.Disk{}, err
 	}
@@ -163,4 +167,23 @@ func (ls *linuxSystem) Wipe(d disko.Disk) error {
 	}
 
 	return udevSettle()
+}
+
+func (ls *linuxSystem) getDiskType(path string, udInfo disko.UdevInfo) (disko.DiskType, error) {
+	ctrl, err := ls.megaraid.Query(0)
+	if err == nil {
+		for _, vd := range ctrl.VirtDrives {
+			if vd.Path == path {
+				if ctrl.DriveGroups[vd.DriveGroup].IsSSD() {
+					return disko.SSD, nil
+				}
+
+				return disko.HDD, nil
+			}
+		}
+	} else if err != megaraid.ErrNoStorcli && err != megaraid.ErrNoController {
+		return disko.HDD, err
+	}
+
+	return getDiskType(udInfo)
 }
