@@ -277,6 +277,20 @@ func (lvm *mockLVM) CreateLV(vgName string, name string, size uint64,
 	return lv, nil
 }
 
+func (lvm *mockLVM) RenameLV(vgName string, lvName string, newLvName string) error {
+	vg, lv, err := lvm.findLV(vgName, lvName)
+	if err != nil {
+		return err
+	}
+
+	delete(vg.Volumes, lvName)
+
+	vg.Volumes[newLvName] = lv
+	lv.Name = newLvName
+
+	return nil
+}
+
 func (lvm *mockLVM) RemoveLV(vgName string, lvName string) error {
 	vg, lv, err := lvm.findLV(vgName, lvName)
 	if err != nil {

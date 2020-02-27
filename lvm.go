@@ -51,6 +51,9 @@ type VolumeManager interface {
 	// RemoveLV removes this LV.
 	RemoveLV(vgName string, lvName string) error
 
+	// RenameLV renames this LV to newLvName.
+	RenameLV(vgName string, lvName string, newLvName string) error
+
 	// ExtendLV expands the LV to the requested new size.
 	ExtendLV(vgName string, lvName string, newSize uint64) error
 

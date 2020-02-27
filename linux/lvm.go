@@ -239,6 +239,10 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 	return lvs[name], nil
 }
 
+func (ls *linuxLVM) RenameLV(vgName string, lvName string, newLvName string) error {
+	return runCommandSettled("lvm", "lvrename", vgName, lvName, newLvName)
+}
+
 func (ls *linuxLVM) RemoveLV(vgName string, lvName string) error {
 	return runCommandSettled(
 		"lvm", "lvremove", "--force", "--force", vgLv(vgName, lvName))
