@@ -196,8 +196,11 @@ func TestLV(t *testing.T) {
 		So(lvm.RemoveLV("ssd0", "moon"), ShouldBeError)
 		So(lvm.RemoveLV("sun", "moon"), ShouldBeError)
 
+		// Rename the second LV to lvRenamed
+		So(lvm.RenameLV("ssd0", "lv2", "lvRenamed"), ShouldBeNil)
+
 		// Remove the second LV
-		So(lvm.RemoveLV("ssd0", "lv2"), ShouldBeNil)
+		So(lvm.RemoveLV("ssd0", "lvRenamed"), ShouldBeNil)
 
 		// Cannot extend LV that doesnt exist
 		So(lvm.ExtendLV("sun", "moon", 1024), ShouldBeError)
