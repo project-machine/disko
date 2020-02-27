@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/anuvu/disko"
@@ -19,7 +20,56 @@ var diskCommands = cli.Command{
 			Usage:  "Create a new gpt partition and table",
 			Action: diskNewPartition,
 		},
+		{
+			Name:   "scan",
+			Usage:  "Scan disks on the system and dump data",
+			Action: diskScan,
+		},
 	},
+}
+
+func diskScan(c *cli.Context) error {
+	var err error
+	var jbytes []byte
+
+	mysys := linux.System()
+	matchAll := func(d disko.Disk) bool {
+		return true
+	}
+
+	if c.Args().Len() == 1 {
+		disk, err := mysys.ScanDisk(c.Args().First())
+		if err != nil {
+			return err
+		}
+
+		if jbytes, err = json.MarshalIndent(&disk, "", "  "); err != nil {
+			return err
+		}
+
+		fmt.Printf("%s\n", string(jbytes))
+
+		return nil
+	}
+
+	var disks disko.DiskSet
+	if c.Args().Len() == 0 {
+		disks, err = mysys.ScanAllDisks(matchAll)
+	} else {
+		disks, err = mysys.ScanDisks(matchAll, c.Args().Slice()...)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if jbytes, err = json.MarshalIndent(disks, "", "  "); err != nil {
+		return err
+	}
+
+	fmt.Printf("%s\n", string(jbytes))
+
+	return nil
 }
 
 func diskNewPartition(c *cli.Context) error {
