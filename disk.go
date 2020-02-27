@@ -38,7 +38,7 @@ func StringToDiskType(typeStr string) DiskType {
 }
 
 // MarshalJSON - Custom to marshal as a string.
-func (t *DiskType) MarshalJSON() ([]byte, error) {
+func (t DiskType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
@@ -120,7 +120,7 @@ func StringToAttachmentType(atypeStr string) AttachmentType {
 }
 
 // MarshalJSON - Custom to marshal as a string.
-func (t *AttachmentType) MarshalJSON() ([]byte, error) {
+func (t AttachmentType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
@@ -364,8 +364,8 @@ func (p *Partition) UnmarshalJSON(b []byte) error {
 }
 
 // MarshalJSON - serialize to json
-func (p *Partition) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&jPartition{
+func (p Partition) MarshalJSON() ([]byte, error) {
+	return json.Marshal(jPartition{
 		Start:  p.Start,
 		Last:   p.Last,
 		ID:     p.ID.String(),
