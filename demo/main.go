@@ -45,6 +45,7 @@ func main() {
 		Commands: []*cli.Command{
 			&diskCommands,
 			&megaraidCommands,
+			&lvmCommands,
 		},
 	}
 
