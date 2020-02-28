@@ -57,7 +57,7 @@ func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
 			continue
 		}
 
-		pvs, err := ls.ScanPVs(getPVFilterByName(name))
+		pvs, err := ls.ScanPVs(func(p disko.PV) bool { return p.VGName == name })
 		if err != nil {
 			return vgs, err
 		}
