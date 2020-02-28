@@ -235,8 +235,8 @@ func getPartitionsBlockDevice(dev string) (string, error) {
 
 	_, err = ioutil.ReadFile(fmt.Sprintf("%s/%s", syspath, "partition"))
 	if err != nil {
-		// this is a block device itself, no /sys/class/block/<dev>/partition
-		return filepath.EvalSymlinks(dev)
+		// dev is a block device, there is no /sys/class/block/<dev>/partition
+		return path.Base(syspath), nil
 	}
 
 	// evalSymlinks on a partition will return
