@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"path"
-	"path/filepath"
 	"strconv"
 
 	"github.com/anuvu/disko/megaraid"
@@ -27,25 +25,6 @@ var megaraidCommands = cli.Command{
 			Action: megaraidDiskSummary,
 		},
 	},
-}
-
-func megaraidNameByDiskID(id int) (string, error) {
-	// given ID, we expect a single file in:
-	// <mrSysPath>/0000:05:00.0/host0/target0:0:<ID>/0:0:<ID>:0/block/
-	mrSysPath := "/sys/bus/pci/drivers/megaraid_sas"
-	idStr := fmt.Sprintf("%d", id)
-	blkDir := mrSysPath + "/*/host*/target0:0:" + idStr + "/0:0:" + idStr + ":0/block/*"
-	matches, err := filepath.Glob(blkDir)
-
-	if err != nil {
-		return "", err
-	}
-
-	if len(matches) != 1 {
-		return "", fmt.Errorf("found %d matches to %s", len(matches), blkDir)
-	}
-
-	return path.Base(matches[0]), nil
 }
 
 func megaraidDiskSummary(c *cli.Context) error {
@@ -85,7 +64,7 @@ func megaraidDiskSummary(c *cli.Context) error {
 		}
 
 		path := ""
-		if bname, err := megaraidNameByDiskID(d.ID); err == nil {
+		if bname, err := megaraid.NameByDiskID(d.ID); err == nil {
 			path = "/dev/" + bname
 		}
 

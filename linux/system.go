@@ -103,13 +103,18 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		return disko.Disk{}, err
 	}
 
+	attachType := getAttachType(udInfo)
+	if megaraid.IsMegaRaidSysPath(udInfo.Properties["DEVPATH"]) {
+		attachType = disko.RAID
+	}
+
 	disk := disko.Disk{
 		Name:       name,
 		Path:       devicePath,
 		SectorSize: ssize,
 		UdevInfo:   udInfo,
 		Type:       diskType,
-		Attachment: getAttachType(udInfo),
+		Attachment: attachType,
 	}
 
 	fh, err := os.Open(devicePath)
