@@ -31,6 +31,7 @@ func TestLVDataToLV(t *testing.T) {
 			Name:      "myvol0",
 			Path:      "/dev/myvg0/myvol0",
 			VGName:    "myvg0",
+			UUID:      "iFMHAp-24c3-LENS-0IFt-4Mhj-rvhf-kBnnuS",
 			Size:      mySize,
 			Type:      disko.THICK,
 			Encrypted: false,

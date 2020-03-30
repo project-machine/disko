@@ -49,6 +49,7 @@ func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
 		name := vgd.Name
 		vg := disko.VG{
 			Name:      name,
+			UUID:      vgd.UUID,
 			Size:      vgd.Size,
 			FreeSpace: vgd.Free,
 		}
@@ -311,6 +312,7 @@ func (d *lvmLVData) toLV() disko.LV {
 
 	lv := disko.LV{
 		Name:      d.Name,
+		UUID:      d.UUID,
 		Path:      d.Path,
 		VGName:    d.VGName,
 		Size:      d.Size,
@@ -324,6 +326,7 @@ func (d *lvmLVData) toLV() disko.LV {
 func (d *lvmPVData) toPV() disko.PV {
 	return disko.PV{
 		Path:     d.Path,
+		UUID:     d.UUID,
 		Name:     path.Base(d.Path),
 		Size:     d.Size,
 		VGName:   d.VGName,
