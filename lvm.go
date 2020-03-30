@@ -135,6 +135,9 @@ const (
 
 	// THIN indicates thinly provisioned logical volume.
 	THIN
+
+	// THINPOOL indicates a pool lv for other lvs
+	THINPOOL
 )
 
 func (t LVType) String() string {

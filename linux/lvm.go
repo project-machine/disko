@@ -296,11 +296,22 @@ func (d *lvmLVData) toLV() disko.LV {
 
 	lvtype := disko.THICK
 
+	var isThin, isPool = false, false
+
 	for _, l := range strings.Split(d.raw["lv_layout"], ",") {
 		if l == "thin" {
-			lvtype = disko.THIN
-			break
+			isThin = true
 		}
+
+		if l == "pool" {
+			isPool = true
+		}
+	}
+
+	if isPool {
+		lvtype = disko.THINPOOL
+	} else if isThin {
+		lvtype = disko.THIN
 	}
 
 	if pathExists(d.Path) {
