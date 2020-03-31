@@ -174,7 +174,7 @@ func (ls *linuxLVM) ExtendVG(vgName string, pvs ...disko.PV) error {
 }
 
 func (ls *linuxLVM) RemoveVG(vgName string) error {
-	return runCommand("lvm", "lvremove", "--force", vgName)
+	return runCommand("lvm", "vgremove", "--force", vgName)
 }
 
 func (ls *linuxLVM) HasVG(vgName string) bool {
