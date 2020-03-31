@@ -67,6 +67,9 @@ type PV struct {
 	// Name returns the name of the PV.
 	Name string `json:"name"`
 
+	// UUID for the PV
+	UUID string `json:"uuid"`
+
 	// Path returns the device path of the PV.
 	Path string `json:"path"`
 
@@ -95,6 +98,9 @@ const ExtentSize = 4 * Mebibyte
 type LV struct {
 	// Name is the name of the logical volume.
 	Name string `json:"name"`
+
+	// UUID for the LV
+	UUID string `json:"uuid"`
 
 	// Path is the full path of the logical volume.
 	Path string `json:"path"`
@@ -129,6 +135,9 @@ const (
 
 	// THIN indicates thinly provisioned logical volume.
 	THIN
+
+	// THINPOOL indicates a pool lv for other lvs
+	THINPOOL
 )
 
 func (t LVType) String() string {
@@ -141,6 +150,9 @@ func (t LVType) String() string {
 type VG struct {
 	// Name is the name of the volume group.
 	Name string `json:"name"`
+
+	// UUID for the VG
+	UUID string `json:"uuid"`
 
 	// Size is the current size of the volume group.
 	Size uint64 `json:"size"`
