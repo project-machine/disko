@@ -1,5 +1,10 @@
 package disko
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // VolumeManager provides logical volume oprations that allows for creation and
 // management of volume groups, physical volumes and logical volumes.
 type VolumeManager interface {
@@ -138,10 +143,63 @@ const (
 
 	// THINPOOL indicates a pool lv for other lvs
 	THINPOOL
+
+	// LVTypeUnknown - unknown type
+	LVTypeUnknown
 )
 
+// nolint: gochecknoglobals
+var lvTypes = map[string]LVType{
+	"THICK":    THICK,
+	"THIN":     THIN,
+	"THINPOOL": THINPOOL,
+	"UNKNOWN":  LVTypeUnknown,
+}
+
 func (t LVType) String() string {
-	return []string{"THICK", "THIN"}[t]
+	for k, v := range lvTypes {
+		if v == t {
+			return k
+		}
+	}
+
+	return fmt.Sprintf("UNKNOWN-%d", t)
+}
+
+func stringToLVType(s string) LVType {
+	if val, ok := lvTypes[s]; ok {
+		return val
+	}
+
+	return LVTypeUnknown
+}
+
+// UnmarshalJSON - custom to read as strings or int
+func (t *LVType) UnmarshalJSON(b []byte) error {
+	var err error
+	var asStr string
+	var asInt int
+
+	err = json.Unmarshal(b, &asInt)
+	if err == nil {
+		*t = LVType(asInt)
+		return nil
+	}
+
+	err = json.Unmarshal(b, &asStr)
+	if err != nil {
+		return err
+	}
+
+	lvtype := stringToLVType(asStr)
+	*t = lvtype
+
+	return nil
+}
+
+// MarshalJSON - serialize to json
+func (t LVType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
 }
 
 // VG wraps a LVM volume group. A volume group combines one or more
