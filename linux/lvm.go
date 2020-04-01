@@ -88,11 +88,20 @@ func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
 		return lvs, err
 	}
 
+	var crypt bool
+	var cryptName, cryptPath string
+
 	for _, lvd := range lvdatum {
 		lv := lvd.toLV()
 
-		if err != nil {
+		if crypt, cryptName, cryptPath, err = getLuksInfo(lv.Path); err != nil {
 			return lvs, err
+		}
+
+		lv.Encrypted = crypt
+		if cryptName != "" {
+			lv.DecryptedLVName = cryptName
+			lv.DecryptedLVPath = cryptPath
 		}
 
 		if !filter(lv) {
@@ -291,9 +300,67 @@ func isRoundExtent(size uint64) error {
 		size, disko.ExtentSize)
 }
 
-func (d *lvmLVData) toLV() disko.LV {
+// chompBytes - strip one trailing newline if present.
+func chompBytes(data []byte) []byte {
+	l := len(data)
+	if l == 0 || data[l-1] != '\n' {
+		return data
+	}
+
+	return data[:l-1]
+}
+
+func getLuksInfo(devpath string) (bool, string, string, error) {
 	crypt := false
 
+	if !pathExists(devpath) {
+		return crypt, "", "", nil
+	}
+
+	// $ cryptsetup luksUUID /dev/vg_ifc0/certs
+	// a41a29c5-e375-4586-b30f-40eee4441db6
+	cmd := []string{"cryptsetup", "luksUUID", devpath}
+	stdout, stderr, rc := runCommandWithOutputErrorRc(cmd...)
+
+	if rc == 1 {
+		return crypt, "", "", nil
+	} else if rc != 0 {
+		return crypt, "", "", cmdError(cmd, stdout, stderr, rc)
+	}
+
+	crypt = true
+	numFields := 5
+	// prefix looks like CRYPT-LUKS1-<luksUUID-without-spaces>-
+	prefix := "CRYPT-LUKS1-" +
+		strings.ReplaceAll(string(chompBytes(stdout)), "-", "") + "-"
+
+	// dmsetup table --consise returns semi-colon delimited records that are comma separated.
+	// each record has 5 fields
+	cmd = []string{"dmsetup", "table", "--concise"}
+	stdout, stderr, rc = runCommandWithOutputErrorRc(cmd...)
+
+	if rc != 0 {
+		return crypt, "", "", cmdError(cmd, stdout, stderr, rc)
+	}
+
+	for _, record := range strings.Split(string(chompBytes(stdout)), ";") {
+		fields := strings.Split(record, ",")
+		if len(fields) != numFields {
+			return crypt, "", "",
+				fmt.Errorf(
+					"unexpected data in dmsetup table --concise. Found %d fields, expected %d: %s",
+					len(fields), numFields, record)
+		}
+
+		if strings.HasPrefix(fields[1], prefix) {
+			return crypt, fields[0], "/dev/mapper/" + fields[0], nil
+		}
+	}
+
+	return crypt, "", "", nil
+}
+
+func (d *lvmLVData) toLV() disko.LV {
 	lvtype := disko.THICK
 
 	var isThin, isPool = false, false
@@ -314,13 +381,6 @@ func (d *lvmLVData) toLV() disko.LV {
 		lvtype = disko.THIN
 	}
 
-	if pathExists(d.Path) {
-		_, _, rc := runCommandWithOutputErrorRc("cryptsetup", "isLuks", d.Path)
-		if rc == 0 {
-			crypt = true
-		}
-	}
-
 	lv := disko.LV{
 		Name:      d.Name,
 		UUID:      d.UUID,
@@ -328,7 +388,7 @@ func (d *lvmLVData) toLV() disko.LV {
 		VGName:    d.VGName,
 		Size:      d.Size,
 		Type:      lvtype,
-		Encrypted: crypt,
+		Encrypted: false,
 	}
 
 	return lv
