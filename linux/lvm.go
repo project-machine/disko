@@ -114,10 +114,28 @@ func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
 	return lvs, nil
 }
 
-func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
-	nilPV := disko.PV{}
+func makeDevPathFromName(name string) string {
+	if strings.HasPrefix(name, "/dev/") {
+		return name
+	}
 
-	err := runCommandSettled("lvm", "pvcreate", "--zero=y", name)
+	return "/dev/" + name
+}
+
+func makeDevNameFromPath(path string) string {
+	if strings.HasPrefix(path, "/dev/") {
+		return path[len("/dev/"):]
+	}
+
+	return path
+}
+
+func (ls *linuxLVM) CreatePV(nameOrPath string) (disko.PV, error) {
+	nilPV := disko.PV{}
+	path := makeDevPathFromName(nameOrPath)
+	name := makeDevNameFromPath(nameOrPath)
+
+	err := runCommandSettled("lvm", "pvcreate", "--zero=y", path)
 
 	if err != nil {
 		return nilPV, err
