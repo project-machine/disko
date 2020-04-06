@@ -187,6 +187,20 @@ func getDiskNames() ([]string, error) {
 	return disks, nil
 }
 
+func getPathForKname(kname string) string {
+	return path.Join("/dev", kname)
+}
+
+func getKnameAndPathForBlockDevice(nameOrPath string) (string, string, error) {
+	var kname, path string
+
+	if kname, err := getSysPathForBlockDevicePath(nameOrPath); err != nil {
+		return kname, path, err
+	}
+
+	return kname, getPathForKname(kname), nil
+}
+
 func getKnameForBlockDevicePath(dev string) (string, error) {
 	// given '/dev/sda1' (or any valid block device path) return 'sda'
 	kname, err := getSysPathForBlockDevicePath(dev)
