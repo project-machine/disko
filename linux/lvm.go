@@ -117,23 +117,30 @@ func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
 func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
 	nilPV := disko.PV{}
 
-	err := runCommandSettled("lvm", "pvcreate", "--zero=y", name)
+	var err error
+	var kname, path string
+
+	if kname, path, err = getKnameAndPathForBlockDevice(name); err != nil {
+		return nilPV, err
+	}
+
+	err = runCommandSettled("lvm", "pvcreate", "--zero=y", path)
 
 	if err != nil {
 		return nilPV, err
 	}
 
-	pvs, err := ls.ScanPVs(getPVFilterByName(name))
+	pvs, err := ls.ScanPVs(getPVFilterByName(kname))
 	if err != nil {
 		return nilPV, err
 	}
 
 	if len(pvs) != 1 {
 		return nilPV,
-			fmt.Errorf("found %d PVs with named %s: %v", len(pvs), name, pvs)
+			fmt.Errorf("found %d PVs named %s: %v", len(pvs), kname, pvs)
 	}
 
-	return pvs[name], nil
+	return pvs[kname], nil
 }
 
 func (ls *linuxLVM) DeletePV(pv disko.PV) error {
