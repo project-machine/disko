@@ -336,13 +336,11 @@ func getLuksInfo(devpath string) (bool, string, string, error) {
 	}
 
 	crypt = true
-	numFields := 5
+	minFields := 4
 	// prefix looks like CRYPT-LUKS1-<luksUUID-without-spaces>-
 	prefix := "CRYPT-LUKS1-" +
 		strings.ReplaceAll(string(chompBytes(stdout)), "-", "") + "-"
 
-	// dmsetup table --consise returns semi-colon delimited records that are comma separated.
-	// each record has 5 fields
 	cmd = []string{"dmsetup", "table", "--concise"}
 	stdout, stderr, rc = runCommandWithOutputErrorRc(cmd...)
 
@@ -350,13 +348,16 @@ func getLuksInfo(devpath string) (bool, string, string, error) {
 		return crypt, "", "", cmdError(cmd, stdout, stderr, rc)
 	}
 
+	// dmsetup table --concise returns semi-colon delimited records that are comma separated.
+	// per dmsetup(8): The representation of a device takes the form:
+	//   <name>,<uuid>,<minor>,<flags>,<table>[,<table>+]
 	for _, record := range strings.Split(string(chompBytes(stdout)), ";") {
 		fields := strings.Split(record, ",")
-		if len(fields) != numFields {
+		if len(fields) < minFields {
 			return crypt, "", "",
 				fmt.Errorf(
-					"unexpected data in dmsetup table --concise. Found %d fields, expected %d: %s",
-					len(fields), numFields, record)
+					"unexpected data in dmsetup table --concise. Found %d fields, expected >= %d: %s",
+					len(fields), minFields, record)
 		}
 
 		if strings.HasPrefix(fields[1], prefix) {
