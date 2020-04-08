@@ -192,11 +192,12 @@ func getPathForKname(kname string) string {
 }
 
 func getKnameAndPathForBlockDevice(nameOrPath string) (string, string, error) {
-	var kname, path string
-
-	if kname, err := getSysPathForBlockDevicePath(nameOrPath); err != nil {
-		return kname, path, err
+	syspath, err := getSysPathForBlockDevicePath(nameOrPath)
+	if err != nil {
+		return "", "", err
 	}
+
+	kname := path.Base(syspath)
 
 	return kname, getPathForKname(kname), nil
 }
