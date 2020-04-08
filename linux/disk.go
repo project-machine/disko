@@ -351,11 +351,24 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 		return err
 	}
 
+	maxEnd := ((d.Size - uint64(d.SectorSize)*33) / disko.Mebibyte) * disko.Mebibyte
+	minStart := disko.Mebibyte
+
 	for _, p := range pSet {
 		gptTable.Partitions[p.Number-1] = toGPTPartition(p, d.SectorSize)
 
+		if p.Start < minStart {
+			return fmt.Errorf("partition %d start (%d) is too low. Must be >= %d",
+				p.Number, p.Start, minStart)
+		}
+
+		if p.Last >= maxEnd {
+			return fmt.Errorf("partition %d Last (%d) is too high. Must be < %d",
+				p.Number, p.Last, maxEnd)
+		}
+
 		if err := zeroStartEnd(fp, int64(p.Start), int64(p.Last)); err != nil {
-			return fmt.Errorf("failed to zero partition %d: %s", p.ID, err)
+			return fmt.Errorf("failed to zero partition %d: %s", p.Number, err)
 		}
 	}
 

@@ -216,3 +216,55 @@ func TestDeletePartition(t *testing.T) {
 		t.Fatalf("There were %d partitions after delete, expected 0", len(pSet))
 	}
 }
+
+func TestBadPartition(t *testing.T) {
+	tmpd, err := ioutil.TempDir("", "disko_test")
+	if err != nil {
+		t.Fatalf("Failed to create tempdir: %s", err)
+	}
+
+	defer os.RemoveAll(tmpd)
+
+	fpath := path.Join(tmpd, "mydisk")
+	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd
+
+	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
+		t.Fatalf("Failed to write to a temp file: %s", err)
+	}
+
+	if err := os.Truncate(fpath, int64(fsize)); err != nil {
+		t.Fatalf("Failed create empty file: %s", err)
+	}
+
+	disk := disko.Disk{
+		Name:       "mydisk",
+		Path:       fpath,
+		Size:       fsize,
+		SectorSize: sectorSize512,
+	}
+
+	fs := disk.FreeSpaces()
+	myGUID := disko.GenGUID()
+
+	part := disko.Partition{
+		Start:  1024, // nolint:gomnd
+		Last:   fs[0].Last,
+		Type:   partid.LinuxLVM,
+		Name:   "mytest partition",
+		ID:     myGUID,
+		Number: uint(1),
+	}
+
+	err = addPartitionSet(disk, disko.PartitionSet{part.Number: part})
+	if err == nil {
+		t.Errorf("Created partition with OOB start (%d). should have failed", part.Start)
+	}
+
+	part.Start = fs[0].Start
+	part.Last = disk.Size - 1
+
+	err = addPartitionSet(disk, disko.PartitionSet{part.Number: part})
+	if err == nil {
+		t.Errorf("Created partition with OOB end (%d). should have failed", part.Last)
+	}
+}
