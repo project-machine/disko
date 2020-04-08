@@ -2,6 +2,7 @@ package linux
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/anuvu/disko"
@@ -157,6 +158,8 @@ func TestGetFileSize(t *testing.T) {
 	data := "This is my data in the file"
 
 	fp, err := ioutil.TempFile("", "testSize")
+	defer os.Remove(fp.Name())
+
 	if err != nil {
 		t.Fatalf("Failed to make test file: %s", err)
 	}
