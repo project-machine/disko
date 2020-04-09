@@ -53,6 +53,10 @@ func (ls *linuxLVM) scanVGs(filter disko.VGFilter, scanArgs ...string) (disko.VG
 		return vgs, err
 	}
 
+	if len(vgdatum) == 0 {
+		return vgs, err
+	}
+
 	for _, vgd := range vgdatum {
 		name := vgd.Name
 		vg := disko.VG{
@@ -66,23 +70,52 @@ func (ls *linuxLVM) scanVGs(filter disko.VGFilter, scanArgs ...string) (disko.VG
 			continue
 		}
 
-		pvs, err := ls.ScanPVs(func(p disko.PV) bool { return p.VGName == name })
-		if err != nil {
-			return vgs, err
-		}
-
-		lvs, err := ls.scanLVs(func(d disko.LV) bool { return true }, name)
-		if err != nil {
-			return vgs, err
-		}
-
-		vg.PVs = pvs
-		vg.Volumes = lvs
-
 		vgs[name] = vg
 	}
 
-	return vgs, nil
+	if len(vgs) == 0 {
+		return vgs, nil
+	}
+
+	fullVgs := disko.VGSet{}
+	lvSetsByVG := map[string]disko.LVSet{}
+	pvSetsByVG := map[string]disko.PVSet{}
+
+	lvs, err := ls.scanLVs(func(d disko.LV) bool { return true })
+
+	if err != nil {
+		return vgs, err
+	}
+
+	for _, lv := range lvs {
+		if _, ok := lvSetsByVG[lv.VGName]; ok {
+			lvSetsByVG[lv.VGName][lv.Name] = lv
+		} else {
+			lvSetsByVG[lv.VGName] = disko.LVSet{lv.Name: lv}
+		}
+	}
+
+	pvs, err := ls.scanPVs(func(d disko.PV) bool { return true })
+
+	if err != nil {
+		return vgs, err
+	}
+
+	for _, pv := range pvs {
+		if _, ok := pvSetsByVG[pv.VGName]; ok {
+			pvSetsByVG[pv.VGName][pv.Name] = pv
+		} else {
+			pvSetsByVG[pv.VGName] = disko.PVSet{pv.Name: pv}
+		}
+	}
+
+	for _, vg := range vgs {
+		vg.PVs = pvSetsByVG[vg.Name]
+		vg.Volumes = lvSetsByVG[vg.Name]
+		fullVgs[vg.Name] = vg
+	}
+
+	return fullVgs, nil
 }
 
 func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
