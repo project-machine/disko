@@ -18,9 +18,13 @@ type linuxLVM struct {
 }
 
 func (ls *linuxLVM) ScanPVs(filter disko.PVFilter) (disko.PVSet, error) {
+	return ls.scanPVs(filter)
+}
+
+func (ls *linuxLVM) scanPVs(filter disko.PVFilter, scanArgs ...string) (disko.PVSet, error) {
 	pvs := disko.PVSet{}
 
-	pvdatum, err := getPvReport()
+	pvdatum, err := getPvReport(scanArgs...)
 	if err != nil {
 		return pvs, err
 	}
@@ -36,11 +40,15 @@ func (ls *linuxLVM) ScanPVs(filter disko.PVFilter) (disko.PVSet, error) {
 }
 
 func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
+	return ls.scanVGs(filter)
+}
+
+func (ls *linuxLVM) scanVGs(filter disko.VGFilter, scanArgs ...string) (disko.VGSet, error) {
 	var vgdatum []lvmVGData
 	var vgs = disko.VGSet{}
 	var err error
 
-	vgdatum, err = getVgReport()
+	vgdatum, err = getVgReport(scanArgs...)
 	if err != nil {
 		return vgs, err
 	}
@@ -63,8 +71,7 @@ func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
 			return vgs, err
 		}
 
-		lvs, err := ls.ScanLVs(
-			func(d disko.LV) bool { return d.VGName == name })
+		lvs, err := ls.scanLVs(func(d disko.LV) bool { return true }, name)
 		if err != nil {
 			return vgs, err
 		}
@@ -79,11 +86,15 @@ func (ls *linuxLVM) ScanVGs(filter disko.VGFilter) (disko.VGSet, error) {
 }
 
 func (ls *linuxLVM) ScanLVs(filter disko.LVFilter) (disko.LVSet, error) {
+	return ls.scanLVs(filter)
+}
+
+func (ls *linuxLVM) scanLVs(filter disko.LVFilter, scanArgs ...string) (disko.LVSet, error) {
 	var lvdatum []lvmLVData
 	var lvs = disko.LVSet{}
 	var err error
 
-	lvdatum, err = getLvReport()
+	lvdatum, err = getLvReport(scanArgs...)
 	if err != nil {
 		return lvs, err
 	}
@@ -130,7 +141,7 @@ func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
 		return nilPV, err
 	}
 
-	pvs, err := ls.ScanPVs(getPVFilterByName(kname))
+	pvs, err := ls.scanPVs(func(d disko.PV) bool { return true }, path)
 	if err != nil {
 		return nilPV, err
 	}
@@ -148,7 +159,7 @@ func (ls *linuxLVM) DeletePV(pv disko.PV) error {
 }
 
 func (ls *linuxLVM) HasPV(name string) bool {
-	pvs, err := ls.ScanPVs(getPVFilterByName(name))
+	pvs, err := ls.scanPVs(func(d disko.PV) bool { return true }, getPathForKname(name))
 	if err != nil {
 		return false
 	}
@@ -167,7 +178,7 @@ func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
 		return disko.VG{}, nil
 	}
 
-	vgSet, err := ls.ScanVGs(getVGFilterByName(name))
+	vgSet, err := ls.scanVGs(func(d disko.VG) bool { return true }, name)
 
 	if err != nil {
 		return disko.VG{}, nil
@@ -195,7 +206,7 @@ func (ls *linuxLVM) RemoveVG(vgName string) error {
 }
 
 func (ls *linuxLVM) HasVG(vgName string) bool {
-	vgs, err := ls.ScanVGs(getVGFilterByName(vgName))
+	vgs, err := ls.scanVGs(func(d disko.VG) bool { return true }, vgName)
 	if err != nil {
 		return false
 	}
@@ -244,7 +255,7 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 		return nilLV, err
 	}
 
-	lvs, err := ls.ScanLVs(getLVFilterByName(vgName, name))
+	lvs, err := ls.scanLVs(func(d disko.LV) bool { return true }, vgLv(vgName, name))
 
 	if err != nil {
 		return nilLV, err
@@ -278,24 +289,12 @@ func (ls *linuxLVM) ExtendLV(vgName string, lvName string,
 }
 
 func (ls *linuxLVM) HasLV(vgName string, name string) bool {
-	lvs, err := ls.ScanLVs(getLVFilterByName(vgName, name))
+	lvs, err := ls.scanLVs(func(d disko.LV) bool { return true }, vgLv(vgName, name))
 	if err != nil {
 		log.Panicf("Failed to scan logical volumes: %s", err)
 	}
 
 	return len(lvs) != 0
-}
-
-func getVGFilterByName(name string) disko.VGFilter {
-	return func(d disko.VG) bool { return d.Name == name }
-}
-
-func getPVFilterByName(name string) disko.PVFilter {
-	return func(d disko.PV) bool { return d.Name == name }
-}
-
-func getLVFilterByName(vgName string, name string) disko.LVFilter {
-	return func(d disko.LV) bool { return d.Name == name && d.VGName == vgName }
 }
 
 func isRoundExtent(size uint64) error {
