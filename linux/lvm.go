@@ -208,13 +208,13 @@ func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
 
 	err := runCommandSettled(cmd...)
 	if err != nil {
-		return disko.VG{}, nil
+		return disko.VG{}, err
 	}
 
 	vgSet, err := ls.scanVGs(func(d disko.VG) bool { return true }, name)
 
 	if err != nil {
-		return disko.VG{}, nil
+		return disko.VG{}, err
 	}
 
 	return vgSet[name], nil
