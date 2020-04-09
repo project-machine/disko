@@ -102,6 +102,10 @@ func newController(cID int, cxDxOut string, cxVxOut string) (Controller, error) 
 
 	for diskID, drive := range pds {
 		dgID := drive.DriveGroup
+		if dgID < 0 {
+			continue
+		}
+
 		dg, ok := ctrl.DriveGroups[dgID]
 
 		if ok {
