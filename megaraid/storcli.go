@@ -102,6 +102,10 @@ func newController(cID int, cxDxOut string, cxVxOut string) (Controller, error) 
 
 	for diskID, drive := range pds {
 		dgID := drive.DriveGroup
+		if dgID < 0 {
+			continue
+		}
+
 		dg, ok := ctrl.DriveGroups[dgID]
 
 		if ok {
@@ -448,6 +452,19 @@ func vdDataToVirtDrive(data map[string]string) (VirtDrive, error) {
 	}, nil
 }
 
+func parseDriveGroupVal(val string) (int, error) {
+	known := map[string]int{
+		"-": -1, // None
+		"F": -2, // Foreign
+	}
+
+	if found, ok := known[val]; ok {
+		return found, nil
+	}
+
+	return parseIntOrDash(val)
+}
+
 func pdDataToDrive(data map[string]string) (Drive, error) {
 	var err error
 	var dID, dg, eID, slot int
@@ -456,7 +473,7 @@ func pdDataToDrive(data map[string]string) (Drive, error) {
 		return Drive{}, err
 	}
 
-	if dg, err = parseIntOrDash(data["DG"]); err != nil {
+	if dg, err = parseDriveGroupVal(data["DG"]); err != nil {
 		return Drive{}, err
 	}
 

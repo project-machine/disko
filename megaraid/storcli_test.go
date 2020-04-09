@@ -137,6 +137,19 @@ func TestParseCxDallNoController(t *testing.T) {
 	}
 }
 
+func TestForeignDriveDall(t *testing.T) {
+	_, drives, err := parseCxDallShow(foreignDallBlob)
+
+	if err != nil {
+		t.Fatalf("failed parsing: %s", err)
+	}
+
+	foreign := -2
+	if drives[0].DriveGroup != foreign {
+		t.Errorf("Drive 0 drivegroup=%d expected %d", drives[0].DriveGroup, foreign)
+	}
+}
+
 func TestParseVirtProperties(t *testing.T) {
 	var exLen = 5
 
@@ -393,6 +406,104 @@ UBUnsp=UBad Unsupported|Rbld=Rebuild
 
 Total Drive Count = 5
 `
+
+// this has a 'F' for a DriveGroup (foreign)
+var foreignDallBlob = `
+CLI Version = 007.1211.0000.0000 Nov 07, 2019
+Operating system = Linux 4.14.174stock-1
+Controller = 0
+Status = Success
+Description = Show Drive Group Succeeded
+
+
+TOPOLOGY :
+========
+
+---------------------------------------------------------------------------
+DG Arr Row EID:Slot DID Type  State BT     Size PDC  PI SED DS3  FSpace TR 
+---------------------------------------------------------------------------
+ 0 -   -   -        -   RAID0 Optl  N  2.181 TB dflt N  N   dflt N      N  
+ 0 0   -   -        -   RAID0 Optl  N  2.181 TB dflt N  N   dflt N      N  
+ 0 0   0   134:3    2   DRIVE Onln  N  2.181 TB dflt N  N   dflt -      N  
+ 1 -   -   -        -   RAID0 Optl  N  2.181 TB dflt N  N   dflt N      N  
+ 1 0   -   -        -   RAID0 Optl  N  2.181 TB dflt N  N   dflt N      N  
+ 1 0   0   134:4    3   DRIVE Onln  N  2.181 TB dflt N  N   dflt -      N  
+ 2 -   -   -        -   RAID0 Optl  N  2.181 TB dflt N  N   dflt N      N  
+ 2 0   -   -        -   RAID0 Optl  N  2.181 TB dflt N  N   dflt N      N  
+ 2 0   0   134:5    1   DRIVE Onln  N  2.181 TB dflt N  N   dflt -      N  
+---------------------------------------------------------------------------
+
+DG=Disk Group Index|Arr=Array Index|Row=Row Index|EID=Enclosure Device ID
+DID=Device ID|Type=Drive Type|Onln=Online|Rbld=Rebuild|Dgrd=Degraded
+Pdgd=Partially degraded|Offln=Offline|BT=Background Task Active
+PDC=PD Cache|PI=Protection Info|SED=Self Encrypting Drive|Frgn=Foreign
+DS3=Dimmer Switch 3|dflt=Default|Msng=Missing|FSpace=Free Space Present
+TR=Transport Ready
+
+
+VD LIST :
+=======
+
+----------------------------------------------------------------
+DG/VD TYPE  State Access Consist Cache Cac sCC     Size Name    
+----------------------------------------------------------------
+0/0   RAID0 Optl  RW     Yes     NRWTD -   OFF 2.181 TB RAID0_3 
+1/1   RAID0 Optl  RW     Yes     NRWTD -   OFF 2.181 TB RAID0_4 
+2/2   RAID0 Optl  RW     Yes     NRWTD -   OFF 2.181 TB RAID0_5 
+----------------------------------------------------------------
+
+EID=Enclosure Device ID| VD=Virtual Drive| DG=Drive Group|Rec=Recovery
+Cac=CacheCade|OfLn=OffLine|Pdgd=Partially Degraded|Dgrd=Degraded
+Optl=Optimal|RO=Read Only|RW=Read Write|HD=Hidden|TRANS=TransportReady|B=Blocked|
+Consist=Consistent|R=Read Ahead Always|NR=No Read Ahead|WB=WriteBack|
+AWB=Always WriteBack|WT=WriteThrough|C=Cached IO|D=Direct IO|sCC=Scheduled
+Check Consistency
+
+Total VD Count = 3
+
+DG Drive LIST :
+=============
+
+----------------------------------------------------------------------------
+EID:Slt DID State DG     Size Intf Med SED PI SeSz Model            Sp Type 
+----------------------------------------------------------------------------
+134:3     2 Onln   0 2.181 TB SAS  HDD N   N  4 KB ST2400MM0129     U  -    
+134:4     3 Onln   1 2.181 TB SAS  HDD N   N  4 KB ST2400MM0129     U  -    
+134:5     1 Onln   2 2.181 TB SAS  HDD N   N  4 KB ST2400MM0129     U  -    
+----------------------------------------------------------------------------
+
+EID=Enclosure Device ID|Slt=Slot No.|DID=Device ID|DG=DriveGroup
+DHS=Dedicated Hot Spare|UGood=Unconfigured Good|GHS=Global Hotspare
+UBad=Unconfigured Bad|Onln=Online|Offln=Offline|Intf=Interface
+Med=Media Type|SED=Self Encryptive Drive|PI=Protection Info
+SeSz=Sector Size|Sp=Spun|U=Up|D=Down|T=Transition|F=Foreign
+UGUnsp=UGood Unsupported|UGShld=UnConfigured shielded|HSPShld=Hotspare shielded
+CFShld=Configured shielded|Cpybck=CopyBack|CBShld=Copyback Shielded
+UBUnsp=UBad Unsupported|Rbld=Rebuild
+
+Total Drive Count = 3
+
+UN-CONFIGURED DRIVE LIST :
+========================
+
+------------------------------------------------------------------------------
+EID:Slt DID State DG       Size Intf Med SED PI SeSz Model            Sp Type 
+------------------------------------------------------------------------------
+134:2     0 UGood F  371.597 GB SAS  SSD N   N  512B KPM51VUG400G     U  -    
+134:6     4 UGood F    2.181 TB SAS  HDD N   N  4 KB ST2400MM0129     U  -    
+------------------------------------------------------------------------------
+
+EID=Enclosure Device ID|Slt=Slot No.|DID=Device ID|DG=DriveGroup
+DHS=Dedicated Hot Spare|UGood=Unconfigured Good|GHS=Global Hotspare
+UBad=Unconfigured Bad|Onln=Online|Offln=Offline|Intf=Interface
+Med=Media Type|SED=Self Encryptive Drive|PI=Protection Info
+SeSz=Sector Size|Sp=Spun|U=Up|D=Down|T=Transition|F=Foreign
+UGUnsp=UGood Unsupported|UGShld=UnConfigured shielded|HSPShld=Hotspare shielded
+CFShld=Configured shielded|Cpybck=CopyBack|CBShld=Copyback Shielded
+UBUnsp=UBad Unsupported|Rbld=Rebuild
+
+Unconfigured Drive Count = 2
+	`
 
 // output of storcli /c0/vall show all
 var storeCliCxVallShowAllBlob = `
