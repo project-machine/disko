@@ -351,6 +351,7 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 		return err
 	}
 
+	pnums := []uint{}
 	maxEnd := ((d.Size - uint64(d.SectorSize)*33) / disko.Mebibyte) * disko.Mebibyte
 	minStart := disko.Mebibyte
 
@@ -370,12 +371,26 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 		if err := zeroStartEnd(fp, int64(p.Start), int64(p.Last)); err != nil {
 			return fmt.Errorf("failed to zero partition %d: %s", p.Number, err)
 		}
+
+		pnums = append(pnums, p.Number)
 	}
 
-	_, err = writeGPTTable(fp, gptTable)
-
-	if err != nil {
+	if _, err := writeGPTTable(fp, gptTable); err != nil {
 		return err
+	}
+
+	info, err := fp.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat %s: %s", d.Path, err)
+	}
+
+	if info.Mode()&os.ModeDevice != 0 {
+		// Call partx if this is a block device.
+		for _, n := range pnums {
+			if err := runCommand("partx", "--add", fmt.Sprintf("%d", n), d.Path); err != nil {
+				return err
+			}
+		}
 	}
 
 	// close the file handle, releasing the lock before calling udevSettle
@@ -411,7 +426,23 @@ func deletePartitions(d disko.Disk, pNums []uint) error {
 		gptTable.Partitions[pNum-1] = emptyPart
 	}
 
-	_, err = writeGPTTable(fp, gptTable)
+	if _, err := writeGPTTable(fp, gptTable); err != nil {
+		return err
+	}
+
+	info, err := fp.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat %s: %s", d.Path, err)
+	}
+
+	if info.Mode()&os.ModeDevice != 0 {
+		// Call partx if this is a block device.
+		for _, pNum := range pNums {
+			if err := runCommand("partx", "--delete", fmt.Sprintf("%d", pNum), d.Path); err != nil {
+				return err
+			}
+		}
+	}
 
 	return err
 }
