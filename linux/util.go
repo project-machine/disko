@@ -100,7 +100,7 @@ func cmdError(args []string, out []byte, err []byte, rc int) error {
 	}
 
 	return fmt.Errorf(
-		"command failed [%d]:\n cmd: %v\nout:%s\nerr%s",
+		"command failed [%d]:\n cmd: %v\n out:%s\n err: %s",
 		rc, args, out, err)
 }
 
