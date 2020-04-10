@@ -21,9 +21,14 @@ var diskCommands = cli.Command{
 			Action: diskNewPartition,
 		},
 		{
-			Name:   "scan",
-			Usage:  "Scan disks on the system and dump data",
+			Name:   "dump",
+			Usage:  "Scan disks on the system and dump data (json)",
 			Action: diskScan,
+		},
+		{
+			Name:   "show",
+			Usage:  "Scan disks on the system and dump data (human)",
+			Action: diskShow,
 		},
 	},
 }
@@ -68,6 +73,43 @@ func diskScan(c *cli.Context) error {
 	}
 
 	fmt.Printf("%s\n", string(jbytes))
+
+	return nil
+}
+
+func diskShow(c *cli.Context) error {
+	var err error
+
+	mysys := linux.System()
+	matchAll := func(d disko.Disk) bool {
+		return true
+	}
+
+	if c.Args().Len() == 1 {
+		disk, err := mysys.ScanDisk(c.Args().First())
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%s\n", disk.Details())
+
+		return nil
+	}
+
+	var disks disko.DiskSet
+	if c.Args().Len() == 0 {
+		disks, err = mysys.ScanAllDisks(matchAll)
+	} else {
+		disks, err = mysys.ScanDisks(matchAll, c.Args().Slice()...)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	for _, d := range disks {
+		fmt.Printf("%s\n", d.Details())
+	}
 
 	return nil
 }
