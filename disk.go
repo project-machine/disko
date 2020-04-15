@@ -3,6 +3,7 @@ package disko
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 )
 
 // DiskType enumerates supported disk types.
@@ -263,7 +264,16 @@ func (d Disk) Details() string {
 	lfmt := "[%2s  %10s %10s %10s %-16s]\n"
 	buf := fmt.Sprintf(lfmt, "#", "Start", "Last", "Size", "Name")
 
-	for _, p := range d.Partitions {
+	pNums := make([]uint, 0, len(d.Partitions))
+	for n := range d.Partitions {
+		pNums = append(pNums, n)
+	}
+
+	sort.Slice(pNums, func(i, j int) bool { return pNums[i] < pNums[j] })
+
+	for _, n := range pNums {
+		p := d.Partitions[n]
+
 		if fsn < len(fss) && fss[fsn].Start < p.Start {
 			buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].Last), mbo(fss[fsn].Size()), "<free>")
 			fsn++
