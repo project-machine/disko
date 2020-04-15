@@ -91,7 +91,7 @@ func diskShow(c *cli.Context) error {
 			return err
 		}
 
-		fmt.Printf("%s\n", disk.Details())
+		fmt.Printf("%s\n%s\n", disk.String(), disk.Details())
 
 		return nil
 	}
@@ -108,7 +108,7 @@ func diskShow(c *cli.Context) error {
 	}
 
 	for _, d := range disks {
-		fmt.Printf("%s\n", d.Details())
+		fmt.Printf("%s\n%s\n", d.String(), d.Details())
 	}
 
 	return nil
