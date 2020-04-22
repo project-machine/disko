@@ -435,16 +435,52 @@ func deletePartitions(d disko.Disk, pNums []uint) error {
 		return fmt.Errorf("failed to stat %s: %s", d.Path, err)
 	}
 
+	// Call delpart only if this is a block device.
 	if info.Mode()&os.ModeDevice != 0 {
-		// Call partx if this is a block device.
 		for _, pNum := range pNums {
-			if err := runCommand("partx", "--delete", fmt.Sprintf("%d", pNum), d.Path); err != nil {
+			partPath := getPartPathForKname(d.Name, pNum)
+
+			if exists, err := blockDeviceExists(partPath); err != nil {
+				return fmt.Errorf("failed to stat %s part %d (%s): %s", d.Name, pNum, partPath, err)
+			} else if !exists {
+				continue
+			}
+
+			if err = runCommand("delpart", d.Path, fmt.Sprintf("%d", pNum)); err != nil {
 				return err
 			}
 		}
 	}
 
-	return err
+	return nil
+}
+
+func blockDeviceExists(bpath string) (bool, error) {
+	info, err := os.Stat(bpath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return info.Mode()&os.ModeDevice != 0, nil
+}
+
+func getPartKname(diskName string, num uint) string {
+	endsWithNum := regexp.MustCompile("[0-9]$")
+	sep := ""
+
+	if endsWithNum.MatchString(diskName) {
+		sep = "p"
+	}
+
+	return fmt.Sprintf("%s%s%d", diskName, sep, num)
+}
+
+func getPartPathForKname(diskName string, num uint) string {
+	return getPathForKname(getPartKname(diskName, num))
 }
 
 // writeProtectiveMBR - add a ProtectiveMBR spanning the disk.
