@@ -46,6 +46,7 @@ func main() {
 			&diskCommands,
 			&megaraidCommands,
 			&lvmCommands,
+			&miscCommands,
 		},
 	}
 
