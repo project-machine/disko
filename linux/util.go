@@ -99,8 +99,22 @@ func cmdError(args []string, out []byte, err []byte, rc int) error {
 		return nil
 	}
 
-	return fmt.Errorf(
-		"command failed [%d]:\n cmd: %v\n out:%s\n err: %s",
+	return errors.New(cmdString(args, out, err, rc))
+}
+
+func cmdString(args []string, out []byte, err []byte, rc int) string {
+	tlen := len(err)
+	if tlen == 0 || err[tlen-1] != '\n' {
+		err = append(err, '\n')
+	}
+
+	tlen = len(out)
+	if tlen == 0 || out[tlen-1] != '\n' {
+		out = append(out, '\n')
+	}
+
+	return fmt.Sprintf(
+		"command returned %d:\n cmd: %v\n out: %s err: %s",
 		rc, args, out, err)
 }
 
