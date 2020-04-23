@@ -13,6 +13,7 @@ import (
 
 const partitionName = "updown"
 const maxParts = 128
+const mySecret = "passw0rd"
 
 //nolint:gochecknoglobals
 var miscCommands = cli.Command{
@@ -38,6 +39,16 @@ var miscCommands = cli.Command{
 					Name:  "skip-partition",
 					Value: false,
 					Usage: "Do not create and remove partition in the loop",
+				},
+				&cli.BoolFlag{
+					Name:  "skip-luks",
+					Value: false,
+					Usage: fmt.Sprintf("Do not setup luks (password is '%s')", mySecret),
+				},
+				&cli.BoolFlag{
+					Name:  "skip-teardown",
+					Value: false,
+					Usage: "Do not tear down on final run - pv, vg, lv, luks will all be still up.",
 				},
 				&cli.IntFlag{
 					Name:  "loops",
@@ -108,15 +119,17 @@ func findPartInfo(diskPath string) (disko.Partition, error) {
 	return part, nil
 }
 
-//nolint: gocognit, funlen
+//nolint: gocognit, gocyclo, funlen
 func miscUpDown(c *cli.Context) error {
 	fname := c.Args().First()
 
 	var err error
 	var numRuns = c.Int("loops")
-	var doLvm = !c.Bool("skip-lvm")
-	var doCreatePV = !c.Bool("skip-pvcreate")
 	var doPartition = !c.Bool("skip-partition")
+	var doCreatePV = !c.Bool("skip-pvcreate")
+	var doLvm = !c.Bool("skip-lvm")
+	var doLuks = !c.Bool("skip-luks")
+	var skipTeardown = c.Bool("skip-teardown")
 	var part disko.Partition
 	var pv disko.PV
 	var vg disko.VG
@@ -172,8 +185,10 @@ func miscUpDown(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("numruns=%d partition=%t createpv=%t lvm=%t\n%s\n",
-		numRuns, doPartition, doCreatePV, doLvm, disk.Details())
+	fmt.Printf("numruns=%d partition=%t createpv=%t lvm=%t luks=%t\n%s\n",
+		numRuns, doPartition, doCreatePV, doLvm, doLuks, disk.Details())
+
+	luksSuffix := "_crypt"
 
 	for i := 0; i < numRuns; i++ {
 		fmt.Printf("[%d] starting %s %d\n", i, disk.Path, part.Number)
@@ -222,7 +237,35 @@ func miscUpDown(c *cli.Context) error {
 				return err
 			}
 
-			fmt.Printf("[%d] created LV %s/%s (%d)\n", i, vg.Name, lv.Name, lv.Size/disko.Mebibyte)
+			fmt.Printf("[%d] created LV %s/%s (%d) luks=%t\n",
+				i, vg.Name, lv.Name, lv.Size/disko.Mebibyte, doLuks)
+
+			luksName := vg.Name + "_" + lv.Name + luksSuffix
+
+			if doLuks {
+				if err = myvmgr.CryptFormat(vg.Name, lv.Name, mySecret); err != nil {
+					fmt.Printf("Failed to CryptFormat %s/%s", vg.Name, lv.Name)
+					return err
+				}
+
+				if err = myvmgr.CryptOpen(vg.Name, lv.Name, luksName, mySecret); err != nil {
+					fmt.Printf("Failed to CryptOpen %s/%s %s", vg.Name, lv.Name, luksName)
+					return err
+				}
+
+				fmt.Printf("[%d] created luks device %s\n", i, luksName)
+			}
+
+			if skipTeardown && i+1 == numRuns {
+				fmt.Printf("Leaving everything up on final run.\n")
+				continue
+			}
+
+			if doLuks {
+				if err = myvmgr.CryptClose(vg.Name, lv.Name, luksName); err != nil {
+					return err
+				}
+			}
 
 			err = myvmgr.RemoveVG(vg.Name)
 			if err != nil {
