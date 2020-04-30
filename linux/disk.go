@@ -106,7 +106,7 @@ func getAttachType(udInfo disko.UdevInfo) disko.AttachmentType {
 	return attach
 }
 
-func readTableSearch(fp io.ReadSeeker, sizes []uint) (gpt.Table, uint, error) {
+func readGPTTableSearch(fp io.ReadSeeker, sizes []uint) (gpt.Table, uint, error) {
 	const noGptFound = "Bad GPT signature"
 	var gptTable gpt.Table
 	var err error
@@ -132,22 +132,63 @@ func readTableSearch(fp io.ReadSeeker, sizes []uint) (gpt.Table, uint, error) {
 	return gpt.Table{}, size, ErrNoPartitionTable
 }
 
-func readTable(fp io.ReadSeeker) (gpt.Table, uint, error) {
-	return readTableSearch(fp, []uint{sectorSize512, sectorSize4k})
+func readGPTTable(fp io.ReadSeeker) (gpt.Table, uint, error) {
+	return readGPTTableSearch(fp, []uint{sectorSize512, sectorSize4k})
 }
 
-func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
+func readMBRTable(fp io.ReadSeeker) (disko.PartitionSet, error) {
+	parts := disko.PartitionSet{}
+
+	if _, err := fp.Seek(0, io.SeekStart); err != nil {
+		return parts, err
+	}
+
+	mbrTable, err := mbr.Read(fp)
+
+	if err == mbr.ErrorBadMbrSign {
+		return parts, ErrNoPartitionTable
+	}
+
+	for i, p := range mbrTable.GetAllPartitions() {
+		if p.IsEmpty() {
+			continue
+		}
+
+		buf := [16]byte{}
+		buf[15] = byte(p.GetType())
+
+		part := disko.Partition{
+			Start:  uint64(p.GetLBAStart()) * sectorSize512,
+			Last:   uint64(p.GetLBALast())*sectorSize512 + sectorSize512 - 1,
+			Type:   disko.PartType(buf),
+			Number: uint(i + 1),
+		}
+		parts[part.Number] = part
+	}
+
+	return parts, nil
+}
+
+func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, disko.TableType, uint, error) { // nolint: unparam
 	var err error
 	var ssize uint
 	var gptTable gpt.Table
 
-	parts := disko.PartitionSet{}
+	gptTable, ssize, err = readGPTTable(fp)
+	if err == ErrNoPartitionTable {
+		parts, err := readMBRTable(fp)
+		if err == ErrNoPartitionTable {
+			return parts, disko.TableNone, ssize, nil
+		}
 
-	gptTable, ssize, err = readTable(fp)
-	if err != nil {
-		return parts, ssize, ErrNoPartitionTable
+		return parts, disko.MBR, sectorSize512, err
 	}
 
+	if err != nil {
+		return disko.PartitionSet{}, disko.GPT, ssize, err
+	}
+
+	parts := disko.PartitionSet{}
 	ssize64 := uint64(ssize)
 
 	for n, p := range gptTable.Partitions {
@@ -166,7 +207,7 @@ func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, uint, error) {
 		parts[part.Number] = part
 	}
 
-	return parts, ssize, nil
+	return parts, disko.GPT, ssize, nil
 }
 
 func getDiskNames() ([]string, error) {
@@ -328,20 +369,92 @@ func zeroStartEnd(fp io.WriteSeeker, start int64, last int64) error {
 	return nil
 }
 
-// addPartitionSet - open the disk, add partitions.
-//     Caller's responsibility to udevSettle
-func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error { //nolint: funlen
-	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
-	if err != nil {
+func addPartitionSetMBR(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.PartitionSet) error {
+	if err := rangeCheckParts(d, pSet); err != nil {
 		return err
 	}
-	defer fp.Close()
 
-	if err := syscall.Flock(int(fp.Fd()), unix.LOCK_EX); err != nil {
-		return fmt.Errorf("failed to lock %s: %s", d.Path, err)
+	if _, err := fp.Seek(0, io.SeekStart); err != nil {
+		return err
 	}
 
-	gptTable, _, err := readTableSearch(fp, []uint{d.SectorSize})
+	mbrTable, err := mbr.Read(fp)
+	if err == mbr.ErrorBadMbrSign {
+		// the Read(0) does call Check(), but only returns the first error. That may be fixed
+		// by FixingSignature, but need to check if that fixes everything.
+		mbrTable.FixSignature()
+
+		if err := mbrTable.Check(); err != nil {
+			return err
+		}
+	} else {
+		return err
+	}
+
+	for _, p := range pSet {
+		mPart := mbrTable.GetPartition(int(p.Number))
+		mPart.SetLBAStart(uint32(p.Start) / uint32(d.SectorSize))
+		mPart.SetLBALen(uint32(p.Size()) / uint32(d.SectorSize))
+		mType, err := partid.PartTypeToMBR(p.Type)
+
+		if err != nil {
+			return err
+		}
+
+		mPart.SetType(mbr.PartitionType(mType))
+
+		if err := zeroStartEnd(fp, int64(p.Start), int64(p.Last)); err != nil {
+			return fmt.Errorf("failed to zero partition %d: %s", p.Number, err)
+		}
+	}
+
+	if _, err := fp.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	if err := mbrTable.Write(fp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func rangeCheckParts(d disko.Disk, pSet disko.PartitionSet) error {
+	maxSize := d.Size
+	if d.Table == disko.MBR {
+		maxSize = uint64(0xFFFFFFFF) * uint64(d.SectorSize) //nolint: gomnd
+	}
+
+	maxEnd := ((maxSize - uint64(d.SectorSize)*33) / disko.Mebibyte) * disko.Mebibyte
+	minStart := disko.Mebibyte
+
+	minPartNum, maxPartNum := uint(1), uint(128) //nolint: gomnd
+	if d.Table == disko.MBR {
+		maxPartNum = 4
+	}
+
+	for _, p := range pSet {
+		if p.Number < minPartNum || p.Number > maxPartNum {
+			return fmt.Errorf("partition number %d is out of range (%d-%d) for %s",
+				p.Number, minPartNum, maxPartNum, d.Table)
+		}
+
+		if p.Start < minStart {
+			return fmt.Errorf("partition %d start (%d) is too low. Must be >= %d",
+				p.Number, p.Start, minStart)
+		}
+
+		if p.Last >= maxEnd {
+			return fmt.Errorf("partition %d Last (%d) is too high. Must be < %d",
+				p.Number, p.Last, maxEnd)
+		}
+	}
+
+	return nil
+}
+
+func addPartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.PartitionSet) error {
+	gptTable, _, err := readGPTTableSearch(fp, []uint{d.SectorSize})
 	if err == ErrNoPartitionTable {
 		gptTable, err = writeNewGPTTable(fp, d.SectorSize, d.Size)
 		if err != nil {
@@ -373,6 +486,40 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error { //nolint: fu
 	}
 
 	if _, err := writeGPTTable(fp, gptTable); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// addPartitionSet - open the disk, add partitions.
+//     Caller's responsibility to udevSettle
+func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
+	if d.Table != disko.MBR && d.Table != disko.GPT && d.Table != disko.TableNone {
+		return fmt.Errorf("cannot add partition disk %s with table type %s", d.Name, d.Table)
+	}
+
+	if err := rangeCheckParts(d, pSet); err != nil {
+		return err
+	}
+
+	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	if err := syscall.Flock(int(fp.Fd()), unix.LOCK_EX); err != nil {
+		return fmt.Errorf("failed to lock %s: %s", d.Path, err)
+	}
+
+	if d.Table == disko.MBR {
+		err = addPartitionSetMBR(fp, d, pSet)
+	} else {
+		err = addPartitionSetGPT(fp, d, pSet)
+	}
+
+	if err != nil {
 		return err
 	}
 
@@ -417,18 +564,38 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error { //nolint: fu
 	return nil
 }
 
-func deletePartitions(d disko.Disk, pNums []uint) error {
-	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
+func deletePartitionSetMBR(fp io.ReadWriteSeeker, pNums []uint) error {
+	if _, err := fp.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	mbrTable, err := mbr.Read(fp)
 	if err != nil {
 		return err
 	}
-	defer fp.Close()
 
-	if err := syscall.Flock(int(fp.Fd()), unix.LOCK_EX); err != nil {
-		return fmt.Errorf("failed to lock %s: %s", d.Path, err)
+	for _, pNum := range pNums {
+		if pNum < 1 || pNum > 4 {
+			return fmt.Errorf("cannot delete partition %d from MBR. Invalid number", pNum)
+		}
+
+		pt := mbrTable.GetPartition(int(pNum))
+
+		// pt.SetBootable(false) // https://github.com/rekby/mbr/pull/3/commits
+		pt.SetType(mbr.PART_EMPTY)
+		pt.SetLBAStart(0)
+		pt.SetLBALen(0)
 	}
 
-	gptTable, _, err := readTableSearch(fp, []uint{d.SectorSize})
+	if err := mbrTable.Write(fp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deletePartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pNums []uint) error {
+	gptTable, _, err := readGPTTableSearch(fp, []uint{d.SectorSize})
 	if err != nil {
 		return err
 	}
@@ -446,6 +613,34 @@ func deletePartitions(d disko.Disk, pNums []uint) error {
 	}
 
 	if _, err := writeGPTTable(fp, gptTable); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deletePartitions(d disko.Disk, pNums []uint) error {
+	if d.Table == disko.MBR {
+		return fmt.Errorf("unsupported: cannot remove partition to disk with MBR table")
+	}
+
+	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	if err := syscall.Flock(int(fp.Fd()), unix.LOCK_EX); err != nil {
+		return fmt.Errorf("failed to lock %s: %s", d.Path, err)
+	}
+
+	if d.Table == disko.MBR {
+		err = deletePartitionSetMBR(fp, pNums)
+	} else {
+		err = deletePartitionSetGPT(fp, d, pNums)
+	}
+
+	if err != nil {
 		return err
 	}
 
@@ -480,6 +675,7 @@ func deletePartitions(d disko.Disk, pNums []uint) error {
 
 func blockDeviceExists(bpath string) (bool, error) {
 	info, err := os.Stat(bpath)
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil

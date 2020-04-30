@@ -1,5 +1,7 @@
 package partid
 
+import "fmt"
+
 // nolint:gochecknoglobals,lll
 var (
 	// Empty - Unused / Empty partition
@@ -76,4 +78,35 @@ var Text = map[[16]byte]string{ // nolint:gochecknoglobals
 	LinuxSrv:        "Linux /srv",
 	MBR:             "MBR",
 	BiosBoot:        "Bios Boot Partition",
+}
+
+// nolint: gomnd,gochecknoglobals
+var mapGPTToMBR = map[[16]byte]byte{
+	Empty:     0x00,
+	LinuxSwap: 0x82,
+	LinuxFS:   0x83,
+	LinuxLVM:  0x8E,
+	LUKS:      0xE8,
+}
+
+// PartTypeToMBR - Convert a GPT Type to its MBR equivalent
+func PartTypeToMBR(gptType [16]byte) (byte, error) {
+	if val, ok := mapGPTToMBR[gptType]; ok {
+		return val, nil
+	}
+
+	padded := true
+
+	for i := 0; i < 15; i++ {
+		if gptType[i] != 0 {
+			padded = false
+			break
+		}
+	}
+
+	if padded {
+		return gptType[15], nil
+	}
+
+	return 0, fmt.Errorf("unknown MBR type %v", gptType)
 }

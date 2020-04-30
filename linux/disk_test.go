@@ -157,7 +157,7 @@ func TestMyPartition(t *testing.T) {
 		t.Fatalf("Failed to open file after writing it: %s", err)
 	}
 
-	pSet, ssize, err := findPartitions(fp)
+	pSet, tType, ssize, err := findPartitions(fp)
 	if err != nil {
 		t.Errorf("Failed to findPartitions on %s: %s", fpath, err)
 	}
@@ -166,12 +166,83 @@ func TestMyPartition(t *testing.T) {
 		t.Errorf("There were %d partitions, expected 1", len(pSet))
 	}
 
+	if tType != disko.GPT {
+		t.Errorf("Expected GPT partition table, found %s", tType)
+	}
+
 	if sectorSize512 != ssize {
 		t.Errorf("Expected size %d, found %d", sectorSize512, ssize)
 	}
 
 	if pSet[1].ID != myGUID {
 		t.Errorf("Guid = %s, not %s", pSet[1].ID.String(), myGUID.String())
+	}
+}
+
+func TestMyPartitionMBR(t *testing.T) {
+	tmpd, err := ioutil.TempDir("", "disko_test")
+	if err != nil {
+		t.Fatalf("Failed to create tempdir: %s", err)
+	}
+
+	defer os.RemoveAll(tmpd)
+
+	fpath := path.Join(tmpd, "mydisk")
+	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd
+
+	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
+		t.Fatalf("Failed to write to a temp file: %s", err)
+	}
+
+	if err := os.Truncate(fpath, int64(fsize)); err != nil {
+		t.Fatalf("Failed create empty file: %s", err)
+	}
+
+	disk := disko.Disk{
+		Name:       "mydiskMBR",
+		Path:       fpath,
+		Size:       fsize,
+		SectorSize: sectorSize512,
+		Table:      disko.MBR,
+	}
+
+	fs := disk.FreeSpaces()
+	if len(fs) != 1 {
+		t.Errorf("Expected 1 free space, found %d", fs)
+	}
+
+	part := disko.Partition{
+		Start:  fs[0].Start,
+		Last:   fs[0].Last,
+		Type:   partid.LinuxLVM,
+		Number: uint(1),
+	}
+
+	err = addPartitionSet(disk, disko.PartitionSet{part.Number: part})
+	if err != nil {
+		t.Errorf("Creation of partition failed: %s", err)
+	}
+
+	fp, err := os.Open(fpath)
+	if err != nil {
+		t.Fatalf("Failed to open file after writing it: %s", err)
+	}
+
+	pSet, tType, ssize, err := findPartitions(fp)
+	if err != nil {
+		t.Errorf("Failed to findPartitions on %s: %s", fpath, err)
+	}
+
+	if len(pSet) != 1 {
+		t.Errorf("There were %d partitions, expected 1", len(pSet))
+	}
+
+	if tType != disko.MBR {
+		t.Errorf("Expected GPT partition table, found %s", tType)
+	}
+
+	if sectorSize512 != ssize {
+		t.Errorf("Expected size %d, found %d", sectorSize512, ssize)
 	}
 }
 
@@ -193,7 +264,7 @@ func TestDeletePartition(t *testing.T) {
 		t.Fatalf("Failed to open file after writing it: %s", err)
 	}
 
-	pSet, _, err := findPartitions(fp)
+	pSet, _, _, err := findPartitions(fp)
 	if err != nil {
 		t.Fatalf("Failed to findPartitions on %s: %s", disk.Path, err)
 	}
@@ -207,7 +278,7 @@ func TestDeletePartition(t *testing.T) {
 		t.Fatalf("Failed delete partition 1: %s", err)
 	}
 
-	pSet, _, err = findPartitions(fp)
+	pSet, _, _, err = findPartitions(fp)
 	if err != nil {
 		t.Fatalf("Failed to re-findPartitions on %s: %s", disk.Path, err)
 	}
