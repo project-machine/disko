@@ -499,6 +499,7 @@ func getPartPathForKname(diskName string, num uint) string {
 }
 
 // writeProtectiveMBR - add a ProtectiveMBR spanning the disk.
+// This preserves anything in the first sector that is outside of the partition table.
 func writeProtectiveMBR(fp io.ReadWriteSeeker, sectorSize uint, diskSize uint64) error {
 	buf := make([]byte, sectorSize)
 
@@ -567,10 +568,20 @@ func newProtectiveMBR(buf []byte, sectorSize uint, diskSize uint64) (mbr.MBR, er
 			fmt.Errorf("buffer too small. Must be sectorSize(%d)", sectorSize)
 	}
 
-	// error is ignored here but checked below
-	myMBR, _ := mbr.Read(bytes.NewReader(buf))
+	// https://en.wikipedia.org/wiki/Master_boot_record
+	// partition table takes up 440 (0x1BE) to 511 (0x1FF).  We zero locations
+	// of the partitions, and leave the rest.
+	for offset, i := 0x1BE, 0; i < 16*4; i++ {
+		buf[offset+i] = 0
+	}
+	// then explicitly write the mbr signature
+	buf[0x1FE] = 0x55
+	buf[0x1FF] = 0xAA
 
-	myMBR.FixSignature()
+	myMBR, err := mbr.Read(bytes.NewReader(buf))
+	if err != nil {
+		return mbr.MBR{}, err
+	}
 
 	pt := myMBR.GetPartition(1)
 	pt.SetType(mbr.PART_GPT)
