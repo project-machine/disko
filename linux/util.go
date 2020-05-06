@@ -67,8 +67,10 @@ func parseUdevInfo(out []byte, info *disko.UdevInfo) error {
 			}
 
 			info.Properties[kv[0]] = strings.TrimSpace(s)
+		case 'L':
+			// a 'devlink priority'. skip for now.
 		default:
-			return fmt.Errorf("error parsing line: %v", line)
+			return fmt.Errorf("error parsing line: (%s)", line)
 		}
 	}
 
