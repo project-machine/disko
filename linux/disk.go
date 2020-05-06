@@ -330,7 +330,7 @@ func zeroStartEnd(fp io.WriteSeeker, start int64, last int64) error {
 
 // addPartitionSet - open the disk, add partitions.
 //     Caller's responsibility to udevSettle
-func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
+func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error { //nolint: funlen
 	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
 	if err != nil {
 		return err
@@ -373,6 +373,10 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 	}
 
 	if _, err := writeGPTTable(fp, gptTable); err != nil {
+		return err
+	}
+
+	if err := fp.Sync(); err != nil {
 		return err
 	}
 
@@ -442,6 +446,10 @@ func deletePartitions(d disko.Disk, pNums []uint) error {
 	}
 
 	if _, err := writeGPTTable(fp, gptTable); err != nil {
+		return err
+	}
+
+	if err := fp.Sync(); err != nil {
 		return err
 	}
 
