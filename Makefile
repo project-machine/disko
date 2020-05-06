@@ -4,7 +4,7 @@ VERSION_FULL := $(VERSION)$(VERSION_SUFFIX)
 LDFLAGS := "${ldflags:+$ldflags }-X main.version=${ver}${suff}"
 BUILD_FLAGS := -ldflags "-X main.version=$(VERSION_FULL)"
 
-CMDS := demo/demo
+CMDS := demo/demo ptimg/ptimg
 
 GO_FILES := $(wildcard *.go)
 ALL_GO_FILES := $(wildcard *.go */*.go)
@@ -18,6 +18,9 @@ build: .build $(CMDS)
 	touch $@
 
 demo/demo: $(wildcard demo/*.go)
+	cd $(dir $@) && go build $(BUILD_FLAGS) ./...
+
+ptimg/ptimg: $(wildcard ptimg/*.go)
 	cd $(dir $@) && go build $(BUILD_FLAGS) ./...
 
 check: lint gofmt coverage
