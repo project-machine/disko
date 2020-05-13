@@ -148,6 +148,68 @@ func (t *AttachmentType) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// TableType enumerates the type of device to which the disks are
+// attached to in the system.
+type TableType int
+
+const (
+	// TableNone - no table type
+	TableNone TableType = iota
+
+	// MBR - a Master Boot Record style partition table.
+	MBR
+
+	// GPT - a Guid Partition Table style partition table
+	GPT
+)
+
+func (t TableType) String() string {
+	return []string{"NONE", "MBR", "GPT"}[t]
+}
+
+// StringToTableType - Convert a string to an TableType
+func StringToTableType(atypeStr string) TableType {
+	kmap := map[string]TableType{
+		"NONE": TableNone,
+		"MBR":  MBR,
+		"GPT":  GPT,
+	}
+
+	if atype, ok := kmap[atypeStr]; ok {
+		return atype
+	}
+
+	return TableNone
+}
+
+// MarshalJSON - Custom to marshal as a string.
+func (t TableType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
+
+// UnmarshalJSON - reverse of the custom marshler
+func (t *TableType) UnmarshalJSON(b []byte) error {
+	var err error
+	var asStr string
+	var asInt int
+
+	err = json.Unmarshal(b, &asInt)
+	if err == nil {
+		*t = TableType(asInt)
+		return nil
+	}
+
+	err = json.Unmarshal(b, &asStr)
+	if err != nil {
+		return err
+	}
+
+	dtype := StringToTableType(asStr)
+	*t = dtype
+
+	return nil
+}
+
 // PartType represents a GPT Partition GUID
 type PartType GUID
 
@@ -187,6 +249,9 @@ type Disk struct {
 
 	// Partitions is the set of partitions on this disk.
 	Partitions PartitionSet `json:"partitions"`
+
+	// TableType is the type of the table
+	Table TableType `json:"table"`
 
 	// UdevInfo is the disk's udev information.
 	UdevInfo UdevInfo `json:"udevInfo"`
@@ -240,8 +305,8 @@ func (d Disk) String() string {
 	}
 
 	return fmt.Sprintf(
-		"%s (%s) Size=%s NumParts=%d FreeSpace=%s/%d SectorSize=%d Attachment=%s Type=%s",
-		d.Name, d.Path, mbsize(d.Size), len(d.Partitions),
+		"%s (%s) Table=%s Size=%s NumParts=%d FreeSpace=%s/%d SectorSize=%d Attachment=%s Type=%s",
+		d.Name, d.Path, d.Table, mbsize(d.Size), len(d.Partitions),
 		mbsize(avail), len(fs), d.SectorSize,
 		d.Attachment, d.Type)
 }

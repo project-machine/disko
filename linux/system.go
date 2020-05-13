@@ -129,13 +129,15 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 	}
 
 	disk.Size = size
-	parts, ssize, err := findPartitions(fh)
+	parts, tType, ssize, err := findPartitions(fh)
 
-	if err == ErrNoPartitionTable {
-		return disk, nil
+	if err != nil {
+		return disk, err
 	}
 
-	if ssize != disk.SectorSize {
+	disk.Table = tType
+
+	if tType == disko.GPT && ssize != disk.SectorSize {
 		if blockdev {
 			return disk, fmt.Errorf(
 				"disk %s has sector size %d and partition table sector size %d",
