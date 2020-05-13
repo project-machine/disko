@@ -485,7 +485,7 @@ func addPartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 		}
 	}
 
-	if _, err := writeGPTTable(fp, gptTable); err != nil {
+	if _, err := writeGPTTable(fp, gptTable, d.Size); err != nil {
 		return err
 	}
 
@@ -612,7 +612,7 @@ func deletePartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pNums []uint) er
 		gptTable.Partitions[pNum-1] = emptyPart
 	}
 
-	if _, err := writeGPTTable(fp, gptTable); err != nil {
+	if _, err := writeGPTTable(fp, gptTable, d.Size); err != nil {
 		return err
 	}
 
@@ -733,14 +733,19 @@ func writeNewGPTTable(fp io.ReadWriteSeeker, sectorSize uint, diskSize uint64) (
 		DiskGuid:   gpt.Guid(disko.GenGUID())}
 	gptTable := gpt.NewTable(diskSize, &ntArgs)
 
-	if err := writeProtectiveMBR(fp, sectorSize, diskSize); err != nil {
-		return gptTable, err
-	}
-
-	return writeGPTTable(fp, gptTable)
+	return writeGPTTable(fp, gptTable, diskSize)
 }
 
-func writeGPTTable(fp io.ReadWriteSeeker, table gpt.Table) (gpt.Table, error) {
+func writeGPTTable(fp io.ReadWriteSeeker, table gpt.Table, diskSize uint64) (gpt.Table, error) {
+	if err := writeProtectiveMBR(fp, uint(table.SectorSize), diskSize); err != nil {
+		return gpt.Table{}, err
+	}
+
+	table = table.CreateTableForNewDiskSize(diskSize / table.SectorSize)
+	if _, err := fp.Seek(int64(table.SectorSize), io.SeekStart); err != nil {
+		return gpt.Table{}, err
+	}
+
 	if err := table.Write(fp); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed write to table: %s\n", err)
 		return gpt.Table{}, err
@@ -790,9 +795,17 @@ func newProtectiveMBR(buf []byte, sectorSize uint, diskSize uint64) (mbr.MBR, er
 	pt := myMBR.GetPartition(1)
 	pt.SetType(mbr.PART_GPT)
 	pt.SetLBAStart(1)
-	// Upstream pull request would set this to '- 1', not '- 2' as
-	// is commonly written by linux partitioners although actually outside spec.
-	pt.SetLBALen(uint32(diskSize/uint64(sectorSize)) - 2) // nolint: gomnd
+
+	// If mbr.Check did not complain, we would just always write the
+	// length as 0xFFFFFFFF which is what windows and sfdisk do.
+	// sfdisk actually complains about our -1 value.
+	// see https://github.com/rekby/mbr/pull/2/files
+	max := uint64(0xFFFFFFFF) // nolint: gomnd
+	if diskSize/uint64(sectorSize) > max {
+		pt.SetLBALen(uint32(max) - 1)
+	} else {
+		pt.SetLBALen(uint32(diskSize/uint64(sectorSize)) - 1)
+	}
 
 	for pnum := 2; pnum <= 4; pnum++ {
 		pt := myMBR.GetPartition(pnum)
