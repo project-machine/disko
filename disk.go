@@ -94,11 +94,17 @@ const (
 
 	// IDE - indicates that the device is attached to IDE.
 	IDE
+
+	// NBD - a network block device (/dev/nbd0)
+	NBD
+
+	// LOOP - a loop device (/dev/loop0)
+	LOOP
 )
 
 func (t AttachmentType) String() string {
 	return []string{"UNKNOWN", "RAID", "SCSI", "ATA", "PCIE", "USB",
-		"VIRTIO", "IDE"}[t]
+		"VIRTIO", "IDE", "NBD", "LOOP"}[t]
 }
 
 // StringToAttachmentType - Convert a string to an AttachmentType
@@ -111,6 +117,8 @@ func StringToAttachmentType(atypeStr string) AttachmentType {
 		"PCIE":    PCIE,
 		"VIRTIO":  VIRTIO,
 		"IDE":     IDE,
+		"NBD":     NBD,
+		"LOOP":    LOOP,
 	}
 
 	if atype, ok := kmap[atypeStr]; ok {

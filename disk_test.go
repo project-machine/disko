@@ -135,6 +135,8 @@ func TestAttachmentTypeString(t *testing.T) {
 		{disko.USB, "USB"},
 		{disko.VIRTIO, "VIRTIO"},
 		{disko.IDE, "IDE"},
+		{disko.NBD, "NBD"},
+		{disko.LOOP, "LOOP"},
 	} {
 		found := d.dtype.String()
 		if found != d.expected {
