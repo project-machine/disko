@@ -100,6 +100,10 @@ func getAttachType(udInfo disko.UdevInfo) disko.AttachmentType {
 			attach = disko.VIRTIO
 		} else if strings.Contains(udInfo.SysPath, "/nvme/") {
 			attach = disko.PCIE
+		} else if strings.Contains(udInfo.SysPath, "/virtual/block/nbd") {
+			attach = disko.NBD
+		} else if strings.Contains(udInfo.SysPath, "/virtual/block/loop") {
+			attach = disko.LOOP
 		}
 	}
 
