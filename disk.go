@@ -233,6 +233,67 @@ func (ds DiskSet) Details() string {
 	return ""
 }
 
+// Property - a property of a disk such
+type Property string
+
+const (
+	// Ephemeral - A cloud ephemeral disk.
+	Ephemeral Property = "EPHEMERAL"
+)
+
+// PropertySet - a group of properties of a disk
+type PropertySet map[Property]bool
+
+// MarshalJSON - serialize to json
+func (p PropertySet) MarshalJSON() ([]byte, error) {
+	keys := []string{}
+
+	for k := range p {
+		// Drop false values.
+		if !p[k] {
+			continue
+		}
+
+		keys = append(keys, string(k))
+	}
+
+	sort.Strings(keys)
+
+	return json.Marshal(keys)
+}
+
+// UnmarshalJSON - json unserialize
+func (p *PropertySet) UnmarshalJSON(b []byte) error {
+	s := map[string]bool{}
+
+	err := json.Unmarshal(b, &s)
+	if err == nil {
+		for k, v := range s {
+			// drop false values
+			if !v {
+				continue
+			}
+
+			(*p)[Property(k)] = v
+		}
+
+		return nil
+	}
+
+	slist := []string{}
+
+	err = json.Unmarshal(b, &slist)
+	if err != nil {
+		return err
+	}
+
+	for _, k := range slist {
+		(*p)[Property(k)] = true
+	}
+
+	return nil
+}
+
 // Disk wraps the disk level operations. It provides basic information
 // about the disk including name, device path, size etc.
 type Disk struct {
@@ -263,6 +324,9 @@ type Disk struct {
 
 	// TableType is the type of the table
 	Table TableType `json:"table"`
+
+	// Properties are a set of properties of this disk.
+	Properties PropertySet `json:"properties"`
 
 	// UdevInfo is the disk's udev information.
 	UdevInfo UdevInfo `json:"udevInfo"`
