@@ -29,6 +29,9 @@ const (
 // ErrNoPartitionTable is returned if there is no partition table.
 var ErrNoPartitionTable error = errors.New("no Partition Table Found")
 
+// nolint: gochecknoglobals
+var xenbusSysPathMatch = regexp.MustCompile(`/devices/vbd-\d+/block/`)
+
 // toGPTPartition - convert the Partition type into a gpt.Partition
 func toGPTPartition(p disko.Partition, sectorSize uint) gpt.Partition {
 	return gpt.Partition{
@@ -104,6 +107,8 @@ func getAttachType(udInfo disko.UdevInfo) disko.AttachmentType {
 			attach = disko.NBD
 		} else if strings.Contains(udInfo.SysPath, "/virtual/block/loop") {
 			attach = disko.LOOP
+		} else if xenbusSysPathMatch.MatchString(udInfo.SysPath) {
+			attach = disko.XENBUS
 		}
 	}
 

@@ -100,6 +100,9 @@ const (
 
 	// LOOP - a loop device (/dev/loop0)
 	LOOP
+
+	// XENBUS - xen blkfront
+	XENBUS
 )
 
 func (t AttachmentType) String() string {
