@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// nolint: funlen
 func TestGetAttachType(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(
@@ -62,6 +63,57 @@ func TestGetAttachType(t *testing.T) {
 			Properties: map[string]string{},
 			Symlinks: []string{"disk/by-id/nvme-SPCC_M.2_PCIe_SSD_BD52079C067D00486555",
 				"disk/by-id/nvme-eui.6479a72be0043535"},
+		}))
+	assert.Equal(
+		disko.XENBUS,
+		getAttachType(disko.UdevInfo{
+			Name:    "xvdf",
+			SysPath: "/devices/vbd-51792/block/xvdf",
+			Properties: map[string]string{
+				"DEVNAME":          "/dev/xvdf",
+				"DEVPATH":          "/devices/vbd-51792/block/xvdf",
+				"DEVTYPE":          "disk",
+				"MAJOR":            "202",
+				"MINOR":            "80",
+				"SUBSYSTEM":        "block",
+				"TAGS":             ":systemd:",
+				"USEC_INITIALIZED": "2085116822",
+			},
+			Symlinks: []string{},
+		}))
+	assert.Equal(
+		disko.NBD,
+		getAttachType(disko.UdevInfo{
+			Name:    "nbd0",
+			SysPath: "/devices/virtual/block/nbd0",
+			Properties: map[string]string{
+				"DEVNAME":          "/dev/nbd0",
+				"DEVPATH":          "/devices/virtual/block/nbd0",
+				"DEVTYPE":          "disk",
+				"MAJOR":            "43",
+				"MINOR":            "0",
+				"SUBSYSTEM":        "block",
+				"TAGS":             ":systemd:",
+				"USEC_INITIALIZED": "781854313926",
+			},
+			Symlinks: []string{},
+		}))
+	assert.Equal(
+		disko.LOOP,
+		getAttachType(disko.UdevInfo{
+			Name:    "loop1",
+			SysPath: "/devices/virtual/block/loop1",
+			Properties: map[string]string{
+				"DEVNAME":          "/dev/loop1",
+				"DEVPATH":          "/devices/virtual/block/loop1",
+				"DEVTYPE":          "disk",
+				"MAJOR":            "7",
+				"MINOR":            "1",
+				"SUBSYSTEM":        "block",
+				"TAGS":             ":systemd:",
+				"USEC_INITIALIZED": "1264916",
+			},
+			Symlinks: []string{},
 		}))
 }
 
