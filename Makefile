@@ -15,12 +15,12 @@ build: .build $(CMDS)
 
 .build: $(GO_FILES)
 	go build ./...
-	touch $@
+	@touch $@
 
-demo/demo: $(wildcard demo/*.go)
+demo/demo: $(wildcard demo/*.go) $(GO_FILES)
 	cd $(dir $@) && go build $(BUILD_FLAGS) ./...
 
-ptimg/ptimg: $(wildcard ptimg/*.go)
+ptimg/ptimg: $(wildcard ptimg/*.go) $(GO_FILES)
 	cd $(dir $@) && go build $(BUILD_FLAGS) ./...
 
 check: lint gofmt coverage
@@ -29,13 +29,13 @@ gofmt: .gofmt
 
 .gofmt: $(ALL_GO_FILES)
 	o=$$(gofmt -l -w .) && [ -z "$$o" ] || { echo "gofmt made changes: $$o"; exit 1; }
-	touch $@
+	@touch $@
 
 lint: .lint
 
 .lint: $(ALL_GO_FILES)
 	golangci-lint run --enable-all
-	touch $@
+	@touch $@
 
 test:
 	go test -v ./...
@@ -50,7 +50,7 @@ coverage.txt: $(ALL_GO_FILES)
 
 debug:
 	@echo VERSION=$(VERSION)
-	@echo VERSION=$(VERSION_FULL)
+	@echo VERSION_FULL=$(VERSION_FULL)
 	@echo CMDS=$(CMDS)
 
 clean:
