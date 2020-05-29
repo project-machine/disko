@@ -348,32 +348,6 @@ func connectNBD(fname string, imgFormat string) (func() error, string, error) {
 	return nilFunc, "", fmt.Errorf("did not find available nbd device")
 }
 
-/*
-func showCommand(args ...string) error {
-	out, err, rc := runCommandWithOutputErrorRc(args...)
-	cmdstr := cmdString(args, out, err, rc)
-	fmt.Fprint(os.Stderr, cmdstr)
-
-	if rc == 0 {
-		return nil
-	}
-
-	return errors.New(cmdstr)
-}
-
-func showCommandWithStdin(input string, args ...string) error {
-	out, err, rc := runCommandWithOutputErrorRcStdin(input, args...)
-	cmdstr := cmdString(args, out, err, rc)
-	fmt.Fprint(os.Stderr, cmdstr)
-
-	if rc == 0 {
-		return nil
-	}
-
-	return errors.New(cmdstr)
-}
-*/
-
 func main() {
 	app := &cli.App{
 		Name:    "ptimg",
