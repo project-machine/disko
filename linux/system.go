@@ -90,6 +90,10 @@ func getDiskProperties(d disko.UdevInfo) disko.PropertySet {
 		props[disko.Ephemeral] = true
 	}
 
+	if d.Properties["ID_MODEL"] == "Amazon EC2 NVMe Instance Storage" {
+		props[disko.Ephemeral] = true
+	}
+
 	return props
 }
 
