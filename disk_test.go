@@ -280,3 +280,106 @@ func TestDiskUnserializeJson(t *testing.T) {
 		}
 	}
 }
+
+func checkPropertySetEqual(a, b disko.PropertySet) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for k, v1 := range a {
+		if v2, ok := b[k]; ok != true || v1 != v2 {
+			return false
+		}
+	}
+
+	for k, v1 := range b {
+		if v2, ok := a[k]; ok != true || v1 != v2 {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Unmarshal either a list of strings or a PropertySet.
+func TestUnmarshalProperties(t *testing.T) {
+	tables := []struct {
+		input    string
+		expected disko.PropertySet
+		msg      string
+	}{
+		{
+			`["EPHEMERAL"]`,
+			disko.PropertySet{disko.Ephemeral: true},
+			"simple test",
+		},
+		{
+			`{"EPHEMERAL": true}`,
+			disko.PropertySet{disko.Ephemeral: true},
+			"map string:bool supported.",
+		},
+		{
+			`{"PROP1": true, "PROP2": false}`,
+			disko.PropertySet{disko.Property("PROP1"): true},
+			"false values dropped.",
+		},
+	}
+
+	for _, table := range tables {
+		found := disko.PropertySet{}
+
+		err := found.UnmarshalJSON([]byte(table.input))
+		if err != nil {
+			t.Errorf("UnmarshalJSON(%s) returned error %s", table.input, err)
+			continue
+		}
+
+		if !checkPropertySetEqual(found, table.expected) {
+			t.Errorf("UnmarshalJSON(%s) returned %#v. expected %#v (%s)",
+				table.input, found, table.expected, table.msg)
+		}
+
+		fmt.Printf("%s: found %#v\n", table.msg, table.expected)
+	}
+}
+
+// PropertySet should marshal into a sorted list of strings.
+func TestMarshalProperties(t *testing.T) {
+	tables := []struct {
+		input    disko.PropertySet
+		expected string
+		msg      string
+	}{
+		{
+			disko.PropertySet{disko.Ephemeral: true},
+			`["EPHEMERAL"]`,
+			"simple test",
+		},
+		{
+			disko.PropertySet{disko.Ephemeral: false, disko.Property("SILLY"): true},
+			`["SILLY"]`,
+			"false values are not included",
+		},
+		{
+			disko.PropertySet{
+				disko.Property("ARTSY"): true,
+				disko.Ephemeral:         true,
+				disko.Property("SILLY"): true},
+			`["ARTSY","EPHEMERAL","SILLY"]`,
+			"values are sorted",
+		},
+	}
+
+	for _, table := range tables {
+		found, err := table.input.MarshalJSON()
+		if err != nil {
+			t.Errorf("MarshalJSON(%v) returned error %s", table.input, err)
+			continue
+		}
+
+		if string(found) != table.expected {
+			t.Errorf("MarshalJSON(%v) returned %v. expected %v", table.input,
+				string(found), table.expected)
+		}
+	}
+}
