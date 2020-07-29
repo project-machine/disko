@@ -55,7 +55,12 @@ func megaraidDiskSummary(c *cli.Context) error {
 			stype = "SSD"
 		}
 
-		data = append(data, []string{vd.Path, vd.RaidName, stype, vd.Raw["State"]})
+		name := vd.RaidName
+		if vd.RaidName == "" {
+			name = fmt.Sprintf("virtid-%d", vd.ID)
+		}
+
+		data = append(data, []string{vd.Path, name, stype, vd.Raw["State"]})
 	}
 
 	for _, d := range ctrl.Drives {
