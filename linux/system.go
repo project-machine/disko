@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"syscall"
 
 	"github.com/anuvu/disko"
@@ -21,6 +22,13 @@ func System() disko.System {
 		megaraid: megaraid.CachingStorCli(),
 	}
 }
+
+// example below, of an azure vmbus disk that is ephemeral.
+// matching intent of /lib/udev/rules.d/66-azure-ephemeral.rules
+// /devices/LNXSYSTM:00/LNXSYBUS:00/PNP0A03:00/device:07/VMBUS:01/00000000-0001-8899-0000-000000000000/
+//      host1/target1:0:1/1:0:1:0/block/sdb
+// nolint: gochecknoglobals
+var vmbusSyspathEphemeral = regexp.MustCompile(`.*/VMBUS:\d\d/00000000-0001-\d{4}-\d{4}-\d{12}/host.*`)
 
 func (ls *linuxSystem) ScanAllDisks(filter disko.DiskFilter) (disko.DiskSet, error) {
 	var err error
@@ -75,6 +83,20 @@ func (ls *linuxSystem) ScanDisks(filter disko.DiskFilter,
 	return disks, nil
 }
 
+func getDiskProperties(d disko.UdevInfo) disko.PropertySet {
+	props := disko.PropertySet{}
+
+	if vmbusSyspathEphemeral.MatchString(d.SysPath) {
+		props[disko.Ephemeral] = true
+	}
+
+	if d.Properties["ID_MODEL"] == "Amazon EC2 NVMe Instance Storage" {
+		props[disko.Ephemeral] = true
+	}
+
+	return props
+}
+
 func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 	var err error
 	var blockdev = true
@@ -108,6 +130,8 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		attachType = disko.RAID
 	}
 
+	properties := getDiskProperties(udInfo)
+
 	disk := disko.Disk{
 		Name:       name,
 		Path:       devicePath,
@@ -115,6 +139,7 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		UdevInfo:   udInfo,
 		Type:       diskType,
 		Attachment: attachType,
+		Properties: properties,
 	}
 
 	fh, err := os.Open(devicePath)
