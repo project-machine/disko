@@ -312,13 +312,30 @@ func (ls *linuxLVM) RemoveLV(vgName string, lvName string) error {
 
 func (ls *linuxLVM) ExtendLV(vgName string, lvName string,
 	newSize uint64) error {
-	if err := isRoundExtent(newSize); err != nil {
+	var err error
+
+	if err = isRoundExtent(newSize); err != nil {
 		return err
 	}
 
-	return runCommandSettled(
+	err = runCommandSettled(
 		"lvm", "lvextend", fmt.Sprintf("--size=%dB", newSize),
 		vgLv(vgName, lvName))
+
+	if err != nil {
+		return err
+	}
+
+	if crypt, cryptName, _, err := getLuksInfo(lvPath(vgName, lvName)); err != nil {
+		return err
+	} else if crypt && cryptName != "" {
+		// luks device already opened, so resize it.
+		if err := runCommandSettled("cryptsetup", "resize", cryptName); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (ls *linuxLVM) HasLV(vgName string, name string) bool {
@@ -349,6 +366,12 @@ func chompBytes(data []byte) []byte {
 	return data[:l-1]
 }
 
+// getLuksInfo - get luks information for the provided block device path)
+// returns:
+//    crypt - boolean indicating if device is encrypted.
+//    cryptName - name of crypt dev if device is open - "" if not encrypted.
+//    cryptPath - path of crypt dev if device is open - "" if not encrypted.
+//    error - nil unless an error occurred.
 func getLuksInfo(devpath string) (bool, string, string, error) {
 	crypt := false
 
