@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 
 	"github.com/anuvu/disko"
 	"github.com/anuvu/disko/linux"
@@ -39,6 +40,11 @@ var miscCommands = cli.Command{
 					Name:  "skip-partition",
 					Value: false,
 					Usage: "Do not create and remove partition in the loop",
+				},
+				&cli.BoolFlag{
+					Name:  "skip-extend",
+					Value: false,
+					Usage: "Do not extend the volume",
 				},
 				&cli.BoolFlag{
 					Name:  "skip-luks",
@@ -129,11 +135,14 @@ func miscUpDown(c *cli.Context) error {
 	var doCreatePV = !c.Bool("skip-pvcreate")
 	var doLvm = !c.Bool("skip-lvm")
 	var doLuks = !c.Bool("skip-luks")
+	var doExtend = !c.Bool("skip-extend")
 	var skipTeardown = c.Bool("skip-teardown")
 	var part disko.Partition
 	var pv disko.PV
 	var vg disko.VG
 	var lv disko.LV
+
+	var createMiB, extendMiB uint64 = 100, 48 //nolint: gomnd
 
 	if fname == "" {
 		return fmt.Errorf("must provide disk/file to partition")
@@ -153,8 +162,17 @@ func miscUpDown(c *cli.Context) error {
 		return fmt.Errorf("failed to scan %s: %s", fname, err)
 	}
 
-	partPath := fmt.Sprintf("%s%d", disk.Path, part.Number)
-	partName := fmt.Sprintf("%s%d", path.Base(disk.Path), part.Number)
+	endsWithDigit := regexp.MustCompile("[0-9]$")
+	partSep := ""
+
+	if (disk.Attachment == disko.PCIE ||
+		disk.Attachment == disko.NBD ||
+		disk.Attachment == disko.LOOP) || endsWithDigit.MatchString(disk.Path) {
+		partSep = "p"
+	}
+
+	partPath := fmt.Sprintf("%s%s%d", disk.Path, partSep, part.Number)
+	partName := fmt.Sprintf("%s%s%d", path.Base(disk.Path), partSep, part.Number)
 
 	if doPartition {
 		if pathExists(partPath) {
@@ -185,8 +203,8 @@ func miscUpDown(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("numruns=%d partition=%t createpv=%t lvm=%t luks=%t\n%s\n",
-		numRuns, doPartition, doCreatePV, doLvm, doLuks, disk.Details())
+	fmt.Printf("numruns=%d partition=%t createpv=%t lvm=%t luks=%t extend=%t\n%s\n",
+		numRuns, doPartition, doCreatePV, doLvm, doLuks, doExtend, disk.Details())
 
 	luksSuffix := "_crypt"
 
@@ -230,7 +248,7 @@ func miscUpDown(c *cli.Context) error {
 
 			fmt.Printf("[%d] created VG %s\n", i, "myvg0")
 
-			lv, err = myvmgr.CreateLV(vg.Name, "mylv0", 100*disko.Mebibyte, disko.THICK) //nolint: gomnd
+			lv, err = myvmgr.CreateLV(vg.Name, "mylv0", createMiB*disko.Mebibyte, disko.THICK)
 			if err != nil {
 				fmt.Printf("Failed creating lv %s on %s\n", "mylv0", "myvg0")
 
@@ -244,16 +262,25 @@ func miscUpDown(c *cli.Context) error {
 
 			if doLuks {
 				if err = myvmgr.CryptFormat(vg.Name, lv.Name, mySecret); err != nil {
-					fmt.Printf("Failed to CryptFormat %s/%s", vg.Name, lv.Name)
+					fmt.Printf("Failed to CryptFormat %s/%s\n", vg.Name, lv.Name)
 					return err
 				}
 
 				if err = myvmgr.CryptOpen(vg.Name, lv.Name, luksName, mySecret); err != nil {
-					fmt.Printf("Failed to CryptOpen %s/%s %s", vg.Name, lv.Name, luksName)
+					fmt.Printf("Failed to CryptOpen %s/%s %s\n", vg.Name, lv.Name, luksName)
 					return err
 				}
 
 				fmt.Printf("[%d] created luks device %s\n", i, luksName)
+			}
+
+			if doExtend {
+				if err := myvmgr.ExtendLV(vg.Name, lv.Name, (createMiB+extendMiB)*disko.Mebibyte); err != nil {
+					fmt.Printf("Failed to Extend(%s, %s, %dMiB)\n", vg.Name, lv.Name, extendMiB)
+					return err
+				}
+
+				fmt.Printf("[%d] extended %s/%s\n", i, vg.Name, lv.Name)
 			}
 
 			if skipTeardown && i+1 == numRuns {
