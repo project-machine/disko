@@ -1,4 +1,4 @@
-// +build linux,integration
+// +build linux,!skipIntegration
 
 // nolint:errcheck,gomnd
 package linux_test
@@ -24,6 +24,7 @@ func runLog(args ...string) {
 }
 
 func TestPartition(t *testing.T) {
+	skipIfNoLoop(t)
 	var loopDev string
 
 	ast := assert.New(t)

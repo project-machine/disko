@@ -39,11 +39,11 @@ lint: .lint
 	@touch $@
 
 test:
-	go test -race -coverprofile=coverage.txt ./...
+	go test -v -race -coverprofile=coverage.txt ./...
 	go tool cover -html=coverage.txt -o coverage.html
 
 test-all:
-	$(ENV_ROOT) "GOCACHE=$$(go env GOCACHE)" "GOENV=$$(go env GOENV)" go test -coverprofile=coverage-all.txt ./... --tags=integration
+	$(ENV_ROOT) "GOCACHE=$$(go env GOCACHE)" "GOENV=$$(go env GOENV)" go test -v -coverprofile=coverage-all.txt ./...
 	go tool cover -html=coverage-all.txt -o coverage-all.html
 
 debug:

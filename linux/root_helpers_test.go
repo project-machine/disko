@@ -1,5 +1,3 @@
-// +build linux,integration
-
 // nolint:errcheck
 package linux_test
 
@@ -13,7 +11,10 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 func getCommandErrorRCDefault(err error, rcError int) int {
@@ -146,4 +147,38 @@ func randStr(n int) string {
 	}
 
 	return string(b)
+}
+
+func canUseLoop() (bool, string) {
+	loopCtrl := "/dev/loop-control"
+	euid := os.Geteuid()
+
+	if euid != 0 {
+		return false, fmt.Sprintf("uid is %d. must be 0.", euid)
+	}
+
+	fi, err := os.Lstat(loopCtrl)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, loopCtrl + ": did not exist"
+		}
+
+		return false, fmt.Sprintf("%s: %s", loopCtrl, err)
+	}
+
+	if fi.Mode()&os.ModeCharDevice != os.ModeCharDevice {
+		return false, loopCtrl + ": not a character device."
+	}
+
+	if err := unix.Access(loopCtrl, unix.W_OK); err != nil {
+		return false, loopCtrl + ": not writable."
+	}
+
+	return true, ""
+}
+
+func skipIfNoLoop(t *testing.T) {
+	if usable, msg := canUseLoop(); !usable {
+		t.Skip(msg)
+	}
 }
