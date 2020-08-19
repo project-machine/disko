@@ -3,6 +3,7 @@ VERSION_SUFFIX := $(shell [ -z "$$(git status --porcelain --untracked-files=no)"
 VERSION_FULL := $(VERSION)$(VERSION_SUFFIX)
 LDFLAGS := "${ldflags:+$ldflags }-X main.version=${ver}${suff}"
 BUILD_FLAGS := -ldflags "-X main.version=$(VERSION_FULL)"
+ENV_ROOT := $(shell [ "$$(id -u)" = "0" ] && echo env || echo sudo )
 
 CMDS := demo/demo ptimg/ptimg
 
@@ -23,7 +24,7 @@ demo/demo: $(wildcard demo/*.go) $(GO_FILES)
 ptimg/ptimg: $(wildcard ptimg/*.go) $(GO_FILES)
 	cd $(dir $@) && go build $(BUILD_FLAGS) ./...
 
-check: lint gofmt coverage
+check: lint gofmt test
 
 gofmt: .gofmt
 
@@ -38,15 +39,12 @@ lint: .lint
 	@touch $@
 
 test:
-	go test -v ./...
-
-coverage: coverage.html
-
-coverage.html: coverage.txt
+	go test -v -race -coverprofile=coverage.txt ./...
 	go tool cover -html=coverage.txt -o coverage.html
 
-coverage.txt: $(ALL_GO_FILES)
-	go test -race -covermode=atomic -coverprofile coverage.txt ./...
+test-all:
+	$(ENV_ROOT) "GOCACHE=$$(go env GOCACHE)" "GOENV=$$(go env GOENV)" go test -v -coverprofile=coverage-all.txt ./...
+	go tool cover -html=coverage-all.txt -o coverage-all.html
 
 debug:
 	@echo VERSION=$(VERSION)
@@ -56,4 +54,4 @@ debug:
 clean:
 	rm -f $(CMDS) coverage.html coverage.txt .lint .build
 
-.PHONY: debug check test gofmt clean coverage all lint build
+.PHONY: debug check test test-all gofmt clean all lint build
