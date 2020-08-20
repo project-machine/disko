@@ -10,6 +10,8 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -75,6 +77,8 @@ func runCommandWithOutputErrorRc(args ...string) ([]byte, []byte, int) {
 	return stdout.Bytes(), stderr.Bytes(), getCommandErrorRC(err)
 }
 
+// connectLoop - connect fname to a loop device.
+//   return cleanup, devicePath, error
 func connectLoop(fname string) (func() error, string, error) {
 	var cmd = []string{"losetup", "--find", "--show", "--partscan", fname}
 	var stdout, stderr []byte
@@ -149,36 +153,111 @@ func randStr(n int) string {
 	return string(b)
 }
 
-func canUseLoop() (bool, string) {
-	loopCtrl := "/dev/loop-control"
-	euid := os.Geteuid()
-
-	if euid != 0 {
-		return false, fmt.Sprintf("uid is %d. must be 0.", euid)
+func isRoot() error {
+	uid := os.Geteuid()
+	if uid == 0 {
+		return nil
 	}
 
-	fi, err := os.Lstat(loopCtrl)
+	return fmt.Errorf("not root (euid=%d)", uid)
+}
+
+func writableCharDev(path string) error {
+	fi, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return false, loopCtrl + ": did not exist"
+			return fmt.Errorf("%s: did not exist", path)
 		}
 
-		return false, fmt.Sprintf("%s: %s", loopCtrl, err)
+		return fmt.Errorf("%s: %s", path, err)
 	}
 
 	if fi.Mode()&os.ModeCharDevice != os.ModeCharDevice {
-		return false, loopCtrl + ": not a character device."
+		return fmt.Errorf("%s: not a character device", path)
 	}
 
-	if err := unix.Access(loopCtrl, unix.W_OK); err != nil {
-		return false, loopCtrl + ": not writable."
+	if err := unix.Access(path, unix.W_OK); err != nil {
+		return fmt.Errorf("%s: not writable", path)
 	}
 
-	return true, ""
+	return nil
+}
+
+func hasCommand(name string) error {
+	p := which(name)
+	if p == "" {
+		return fmt.Errorf("%s: command not present", p)
+	}
+
+	return nil
+}
+
+func which(name string) string {
+	return whichSearch(name, strings.Split(os.Getenv("PATH"), ":"))
+}
+
+func whichSearch(name string, paths []string) string {
+	var search []string
+
+	if strings.ContainsRune(name, os.PathSeparator) {
+		if path.IsAbs(name) {
+			search = []string{name}
+		} else {
+			search = []string{"./" + name}
+		}
+	} else {
+		search = []string{}
+		for _, p := range paths {
+			search = append(search, path.Join(p, name))
+		}
+	}
+
+	for _, fPath := range search {
+		if err := unix.Access(fPath, unix.X_OK); err == nil {
+			return fPath
+		}
+	}
+
+	return ""
+}
+
+func canUseLoop() error {
+	if err := isRoot(); err != nil {
+		return err
+	}
+
+	if err := writableCharDev("/dev/loop-control"); err != nil {
+		return err
+	}
+
+	return hasCommand("losetup")
+}
+
+func canUseLVM() error {
+	if err := isRoot(); err != nil {
+		return err
+	}
+
+	if err := writableCharDev("/dev/mapper/control"); err != nil {
+		return err
+	}
+
+	return hasCommand("lvm")
 }
 
 func skipIfNoLoop(t *testing.T) {
-	if usable, msg := canUseLoop(); !usable {
-		t.Skip(msg)
+	if err := canUseLoop(); err != nil {
+		t.Skip(err)
 	}
+}
+
+func skipIfNoLVM(t *testing.T) {
+	if err := canUseLVM(); err != nil {
+		t.Skip(err)
+	}
+}
+
+// nolint: gochecknoinits
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
 }
