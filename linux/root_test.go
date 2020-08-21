@@ -6,21 +6,18 @@ package linux_test
 import (
 	"fmt"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/anuvu/disko"
 	"github.com/anuvu/disko/linux"
 	"github.com/anuvu/disko/partid"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sys/unix"
 )
 
 const MiB = 1024 * 1024
 const GiB = MiB * 1024
-
-type cleaner struct {
-	Func    func() error
-	Purpose string
-}
 
 // runLog - run command and Printf, useful for debugging errors.
 func runLog(args ...string) {
@@ -63,15 +60,18 @@ func TestRootPartition(t *testing.T) {
 	var loopDev string
 
 	ast := assert.New(t)
-	tmpFile := getTempFile(GiB)
 
-	defer os.Remove(tmpFile)
+	var cl = cleanList{}
+	defer cl.Cleanup(t)
+
+	c, tmpFile := getTempFile(GiB)
+	cl.Add(c)
 
 	if cleanup, path, err := connectLoop(tmpFile); err != nil {
 		runLog("losetup", "-a")
 		t.Fatalf("failed loop: %s\n", err)
 	} else {
-		defer cleanup()
+		cl.AddF(cleanup, "detach loop "+tmpFile)
 		loopDev = path
 	}
 
@@ -126,29 +126,27 @@ func TestRootLVMExtend(t *testing.T) {
 
 	ast := assert.New(t)
 
-	var cleaners = []cleaner{}
+	var cl = cleanList{}
+	defer cl.Cleanup(t)
+
 	var pv disko.PV
 	var vg disko.VG
 	var lv disko.LV
+	var c cleaner
+	var tmpFile string
+	var tmpDir string
 
 	lvname := "diskotest-lv" + randStr(8)
 	vgname := "diskotest-vg" + randStr(8)
 
-	defer func() {
-		for i := len(cleaners) - 1; i >= 0; i-- {
-			if err := cleaners[i].Func(); err != nil {
-				ast.Failf("cleanup %s: %s", cleaners[i].Purpose, err)
-			}
-		}
-	}()
+	c, tmpDir = getTempDir()
+	cl.Add(c)
 
-	tmpFile := getTempFile(GiB)
-	cleaners = append(cleaners, cleaner{
-		func() error { return os.Remove(tmpFile) },
-		"remove tmpFile " + tmpFile})
+	c, tmpFile = getTempFile(GiB)
+	cl.Add(c)
 
 	lCleanup, disk, err := singlePartDisk(tmpFile)
-	cleaners = append(cleaners, cleaner{lCleanup, "singlePartdisk"})
+	cl.AddF(lCleanup, "singlePartdisk")
 
 	if err != nil {
 		t.Fatalf("Failed to create a single part disk: %s", err)
@@ -161,7 +159,7 @@ func TestRootLVMExtend(t *testing.T) {
 		t.Fatalf("Failed to create pv on %s: %s\n", disk.Path, err)
 	}
 
-	cleaners = append(cleaners, cleaner{func() error { return lvm.DeletePV(pv) }, "remove pv"})
+	cl.AddF(func() error { return lvm.DeletePV(pv) }, "remove pv")
 
 	vg, err = lvm.CreateVG(vgname, pv)
 
@@ -171,7 +169,7 @@ func TestRootLVMExtend(t *testing.T) {
 
 	ast.Equal(vgname, vg.Name)
 
-	cleaners = append(cleaners, cleaner{func() error { return lvm.RemoveVG(vgname) }, "remove VG"})
+	cl.AddF(func() error { return lvm.RemoveVG(vgname) }, "remove VG")
 
 	var size1, size2 uint64 = disko.ExtentSize * 3, disko.ExtentSize * 5
 
@@ -180,8 +178,7 @@ func TestRootLVMExtend(t *testing.T) {
 		t.Fatalf("Failed to create lv %s/%s: %s", vgname, lvname, err)
 	}
 
-	cleaners = append(cleaners,
-		cleaner{func() error { return lvm.RemoveLV(vgname, lvname) }, "remove LV"})
+	cl.AddF(func() error { return lvm.RemoveLV(vgname, lvname) }, "remove LV")
 
 	ast.Equal(lvname, lv.Name)
 	ast.Equal(size1, lv.Size)
@@ -194,9 +191,40 @@ func TestRootLVMExtend(t *testing.T) {
 	foundLv := vgs[vgname].Volumes[lvname]
 	ast.Equalf(size1, foundLv.Size, "initial volume size incorrect")
 
+	mount1 := path.Join(tmpDir, "mp1")
+	os.Mkdir(mount1, 0755)
+
+	if err := runCommand("mkfs.ext4", "-F", "-L"+lvname, foundLv.Path); err != nil {
+		t.Errorf("Failed to mkfs on %s: %s", foundLv.Path, err)
+	}
+
+	if err := unix.Mount(foundLv.Path, mount1, "ext4", 0, ""); err != nil {
+		t.Errorf("Failed mount: %s", err)
+	}
+
+	cl.AddF(func() error { return unix.Unmount(mount1, 0) }, "unmount lv1")
+
+	var stat unix.Statfs_t
+
+	if err = unix.Statfs(mount1, &stat); err != nil {
+		t.Errorf("Statfs failed on mount: %s", err)
+	}
+
+	freeBefore := stat.Blocks
+
 	if err := lvm.ExtendLV(vgname, lvname, size2); err != nil {
 		t.Fatalf("Failed to extend LV %s/%s: %s", vgname, lvname, err)
 	}
+
+	if err := runCommand("resize2fs", foundLv.Path); err != nil {
+		t.Error(err)
+	}
+
+	if err = unix.Statfs(mount1, &stat); err != nil {
+		t.Errorf("Statfs failed on mount after: %s", err)
+	}
+
+	ast.Greater(stat.Blocks, freeBefore, "size of fs did not grow")
 
 	vgs, errScan = lvm.ScanVGs(func(v disko.VG) bool { return v.Name == vgname })
 	if errScan != nil {
