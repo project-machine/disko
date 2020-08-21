@@ -59,7 +59,7 @@ func singlePartDisk(filePath string) (func() error, disko.Disk, error) {
 }
 
 func TestRootPartition(t *testing.T) {
-	skipIfNoLoop(t)
+	iSkipOrFail(t, isRoot, canUseLoop)
 	var loopDev string
 
 	ast := assert.New(t)
@@ -122,8 +122,7 @@ func TestRootPartition(t *testing.T) {
 }
 
 func TestRootLVMExtend(t *testing.T) {
-	skipIfNoLoop(t)
-	skipIfNoLVM(t)
+	iSkipOrFail(t, isRoot, canUseLoop, canUseLVM)
 
 	ast := assert.New(t)
 
