@@ -16,7 +16,7 @@ jobs:
 
     - name: Test
       run: |
-        sudo go test -v -race -covermode=atomic -coverprofile coverage.txt ./...
+        sudo DISKO_INTEGRATION=run go test -v -race -covermode=atomic -coverprofile coverage.txt ./...
 
     - name: Upload Coverage report to CodeCov
       if: success()

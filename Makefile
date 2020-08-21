@@ -43,7 +43,7 @@ test:
 	go tool cover -html=coverage.txt -o coverage.html
 
 test-all:
-	$(ENV_ROOT) "GOCACHE=$$(go env GOCACHE)" "GOENV=$$(go env GOENV)" go test -v -coverprofile=coverage-all.txt ./...
+	$(ENV_ROOT) DISKO_INTEGRATION=$${DISKO_INTEGRATION:-run} "GOCACHE=$$(go env GOCACHE)" "GOENV=$$(go env GOENV)" go test -v -coverprofile=coverage-all.txt -count=1 ./...
 	go tool cover -html=coverage-all.txt -o coverage-all.html
 
 debug:

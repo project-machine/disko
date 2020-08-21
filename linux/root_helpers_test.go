@@ -222,10 +222,6 @@ func whichSearch(name string, paths []string) string {
 }
 
 func canUseLoop() error {
-	if err := isRoot(); err != nil {
-		return err
-	}
-
 	if err := writableCharDev("/dev/loop-control"); err != nil {
 		return err
 	}
@@ -234,10 +230,6 @@ func canUseLoop() error {
 }
 
 func canUseLVM() error {
-	if err := isRoot(); err != nil {
-		return err
-	}
-
 	if err := writableCharDev("/dev/mapper/control"); err != nil {
 		return err
 	}
@@ -245,16 +237,47 @@ func canUseLVM() error {
 	return hasCommand("lvm")
 }
 
-func skipIfNoLoop(t *testing.T) {
-	if err := canUseLoop(); err != nil {
-		t.Skip(err)
-	}
-}
+// iSkipOrFail - run checks
+func iSkipOrFail(t *testing.T, checks ...func() error) {
+	const envName = "DISKO_INTEGRATION"
+	const allowSkip = "allow-skip"
 
-func skipIfNoLVM(t *testing.T) {
-	if err := canUseLVM(); err != nil {
-		t.Skip(err)
+	mode := os.Getenv(envName)
+
+	switch mode {
+	case "":
+		mode = allowSkip
+	case "run", allowSkip:
+	case "skip":
+		t.Skip(envName + "=" + mode)
+		return // be explicit (not actually necessary)
+	default:
+		panic("Invalid value for " + envName + ": " + mode)
 	}
+
+	errors := []error{}
+
+	for _, c := range checks {
+		if err := c(); err != nil {
+			if mode == allowSkip {
+				t.Skip(err)
+				return
+			}
+
+			errors = append(errors, err)
+		}
+	}
+
+	if len(errors) == 0 {
+		return
+	}
+
+	// mode is "run" and there are errors.
+	for _, err := range errors {
+		t.Error(err)
+	}
+
+	t.FailNow()
 }
 
 // nolint: gochecknoinits
