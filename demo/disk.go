@@ -30,6 +30,12 @@ var diskCommands = cli.Command{
 			Usage:  "Scan disks on the system and dump data (human)",
 			Action: diskShow,
 		},
+		{
+			Name: "wipe",
+			Usage: ("Quickly wipe disks on the system. Zero any existing " +
+				"beginning and end of disk and any existing partitions"),
+			Action: diskWipe,
+		},
 	},
 }
 
@@ -43,6 +49,7 @@ func diskScan(c *cli.Context) error {
 	}
 
 	if c.Args().Len() == 1 {
+		// a single argument will only output 1 disk, not an array of one disk.
 		disk, err := mysys.ScanDisk(c.Args().First())
 		if err != nil {
 			return err
@@ -78,30 +85,8 @@ func diskScan(c *cli.Context) error {
 }
 
 func diskShow(c *cli.Context) error {
-	var err error
-
 	mysys := linux.System()
-	matchAll := func(d disko.Disk) bool {
-		return true
-	}
-
-	if c.Args().Len() == 1 {
-		disk, err := mysys.ScanDisk(c.Args().First())
-		if err != nil {
-			return err
-		}
-
-		fmt.Printf("%s\n%s\n", disk.String(), disk.Details())
-
-		return nil
-	}
-
-	var disks disko.DiskSet
-	if c.Args().Len() == 0 {
-		disks, err = mysys.ScanAllDisks(matchAll)
-	} else {
-		disks, err = mysys.ScanDisks(matchAll, c.Args().Slice()...)
-	}
+	disks, err := getDiskSet(mysys, c.Args().Slice()...)
 
 	if err != nil {
 		return err
@@ -109,6 +94,36 @@ func diskShow(c *cli.Context) error {
 
 	for _, d := range disks {
 		fmt.Printf("%s\n%s\n", d.String(), d.Details())
+	}
+
+	return nil
+}
+
+func getDiskSet(mysys disko.System, paths ...string) (disko.DiskSet, error) {
+	matchAll := func(d disko.Disk) bool {
+		return true
+	}
+
+	if len(paths) == 0 || (len(paths) == 1 && paths[0] == "all") {
+		return mysys.ScanAllDisks(matchAll)
+	}
+
+	return mysys.ScanDisks(matchAll, paths...)
+}
+
+func diskWipe(c *cli.Context) error {
+	mysys := linux.System()
+
+	disks, err := getDiskSet(mysys, c.Args().Slice()...)
+
+	if err != nil {
+		return err
+	}
+
+	for _, d := range disks {
+		if err = mysys.Wipe(d); err != nil {
+			return err
+		}
 	}
 
 	return nil

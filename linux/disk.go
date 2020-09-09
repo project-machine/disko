@@ -326,14 +326,31 @@ func getPartName(s string) [72]byte {
 	return b
 }
 
-func zeroPathStartEnd(fpath string, start int64, last int64) error {
-	fp, err := os.OpenFile(fpath, os.O_RDWR, 0)
+func wipeDisk(disk disko.Disk) error {
+	fp, err := os.OpenFile(disk.Path, os.O_RDWR, 0)
 	if err != nil {
 		return err
 	}
 	defer fp.Close()
 
-	return zeroStartEnd(fp, start, last)
+	if err := zeroStartEnd(fp, int64(0), int64(disk.Size)); err != nil {
+		return err
+	}
+
+	for _, p := range disk.Partitions {
+		// The point of this operation is to wipe.  Avoid out of range errors
+		// that could happen as part of a bad partition table.
+		end := disk.Size
+		if end > p.Last {
+			end = disk.Size
+		}
+
+		if err := zeroStartEnd(fp, int64(p.Start), int64(end)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // zeroStartEnd - zero the start and end provided with 1MiB bytes of zeros.
