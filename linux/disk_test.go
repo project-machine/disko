@@ -2,6 +2,7 @@ package linux
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -117,9 +118,8 @@ func TestGetAttachType(t *testing.T) {
 		}))
 }
 
-func genTempGptDisk(tmpd string) (disko.Disk, error) {
+func genTempGptDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 	fpath := path.Join(tmpd, "mydisk")
-	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd
 
 	disk := disko.Disk{
 		Name:       "mydisk",
@@ -141,18 +141,21 @@ func genTempGptDisk(tmpd string) (disko.Disk, error) {
 		return disk, fmt.Errorf("Expected 1 free space, found %d", fs)
 	}
 
-	part := disko.Partition{
-		Start:  fs[0].Start,
-		Last:   fs[0].Last,
-		Type:   partid.LinuxLVM,
-		Name:   "mytest partition",
-		ID:     disko.GenGUID(),
-		Number: uint(1),
-	}
+	parts := disko.PartitionSet{
+		1: disko.Partition{
+			Start:  fs[0].Start,
+			Last:   fs[0].Last,
+			Type:   partid.LinuxLVM,
+			Name:   "mytest partition",
+			ID:     disko.GenGUID(),
+			Number: uint(1),
+		}}
 
-	if err := addPartitionSet(disk, disko.PartitionSet{part.Number: part}); err != nil {
+	if err := addPartitionSet(disk, parts); err != nil {
 		return disk, err
 	}
+
+	disk.Partitions = parts
 
 	return disk, nil
 }
@@ -298,6 +301,99 @@ func TestMyPartitionMBR(t *testing.T) {
 	}
 }
 
+// nolint: funlen
+func TestWipeDisk(t *testing.T) {
+	tmpd, err := ioutil.TempDir("", "disko_test")
+	if err != nil {
+		t.Fatalf("Failed to create tempdir: %s", err)
+	}
+
+	mib := uint64(1024 * 1024) // nolint: gomnd
+
+	defer os.RemoveAll(tmpd)
+
+	disk, err := genTempGptDisk(tmpd, 50*mib) // nolint:gomnd
+	if err != nil {
+		t.Fatalf("Creation of temp disk failed: %s", err)
+	}
+
+	if len(disk.Partitions) == 0 {
+		t.Fatalf("Found no partitions on the disk from genTempGptDisk")
+	}
+
+	fp, err := os.OpenFile(disk.Path, os.O_RDWR, 0)
+	if err != nil {
+		t.Fatalf("Failed to open disk %s", disk.Path)
+	}
+
+	buf := make([]byte, 1024)
+
+	for i := 0; i < 1024; i++ {
+		buf[i] = 0xFF
+	}
+
+	// write 2MiB of 0xFF at first partition.
+	// Wipe should zero the first MiB
+	if _, err := fp.Seek(int64(disk.Partitions[1].Start), io.SeekStart); err != nil {
+		t.Errorf("failed seek to part1 start: %s", err)
+	}
+
+	for i := 0; i < (2*int(mib))/len(buf); i++ {
+		if n, err := fp.Write(buf); n != len(buf) || err != nil {
+			t.Fatalf("failed to write 255 at %d\n", i)
+		}
+	}
+	fp.Close()
+
+	if err := wipeDisk(disk); err != nil {
+		t.Errorf("Failed wipe of disk: %s", err)
+	}
+
+	fp, err = os.OpenFile(disk.Path, os.O_RDWR, 0)
+	if err != nil {
+		t.Errorf("Failed opening %s after wipe: %s", disk.Path, err)
+	}
+
+	for _, c := range [](struct {
+		start uint64
+		size  int
+		val   byte
+		label string
+	}){
+		{0, int(mib), 0x00, "disk start"},
+		{disk.Partitions[1].Start, int(mib), 0x00, "part1 start"},
+		{disk.Partitions[1].Start + mib, int(mib), 0xFF, "scribbled 1"},
+		{disk.Size - mib, int(mib), 0x00, "disk end"},
+	} {
+		if _, err := fp.Seek(int64(c.start), io.SeekStart); err != nil {
+			t.Errorf("Failed seek for %s: %s", c.label, err)
+			continue
+		}
+
+		buf := make([]byte, c.size)
+		readlen, err := io.ReadFull(fp, buf)
+
+		if err != nil {
+			t.Errorf("Failed read of %d from fp for %s: %s", len(buf), c.label, err)
+			continue
+		}
+
+		if readlen != c.size {
+			t.Errorf("Read %d expected %d for %s: %s", readlen, c.size, c.label, err)
+			continue
+		}
+
+		for i := 0; i < c.size; i++ {
+			if buf[i] != c.val {
+				t.Errorf("%s: %d found %d expected %d", c.label, i, buf[i], c.val)
+				break
+			}
+		}
+	}
+
+	fp.Close()
+}
+
 func TestDeletePartition(t *testing.T) {
 	tmpd, err := ioutil.TempDir("", "disko_test")
 	if err != nil {
@@ -306,7 +402,7 @@ func TestDeletePartition(t *testing.T) {
 
 	defer os.RemoveAll(tmpd)
 
-	disk, err := genTempGptDisk(tmpd)
+	disk, err := genTempGptDisk(tmpd, 200*1024*1024) // nolint:gomnd
 	if err != nil {
 		t.Fatalf("Creation of temp disk failed: %s", err)
 	}
