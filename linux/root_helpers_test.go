@@ -19,6 +19,31 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type cleanList struct {
+	cleaners []cleaner
+}
+
+func (c *cleanList) Cleanup(t *testing.T) {
+	for i := len(c.cleaners) - 1; i >= 0; i-- {
+		if err := c.cleaners[i].Func(); err != nil {
+			t.Errorf("cleanup %s: %s", c.cleaners[i].Purpose, err)
+		}
+	}
+}
+
+func (c *cleanList) Add(cl cleaner) {
+	c.cleaners = append(c.cleaners, cl)
+}
+
+func (c *cleanList) AddF(f func() error, msg string) {
+	c.cleaners = append(c.cleaners, cleaner{f, msg})
+}
+
+type cleaner struct {
+	Func    func() error
+	Purpose string
+}
+
 func getCommandErrorRCDefault(err error, rcError int) int {
 	if err == nil {
 		return 0
@@ -129,17 +154,29 @@ func waitForFileSize(devPath string) error {
 		time.Since(startTime), devPath)
 }
 
-func getTempFile(size int64) string {
-	if fp, err := ioutil.TempFile("", "disko_test"); err != nil {
+func getTempDir() (cleaner, string) {
+	p, err := ioutil.TempDir("", "disko_test")
+	if err != nil {
 		panic(err)
-	} else {
-		name := fp.Name()
-		fp.Close()
-		if err := os.Truncate(name, size); err != nil {
-			panic(err)
-		}
-		return name
 	}
+
+	return cleaner{func() error { return os.RemoveAll(p) }, "remove tmpDir " + p}, p
+}
+
+func getTempFile(size int64) (cleaner, string) {
+	fp, err := ioutil.TempFile("", "disko_test")
+	if err != nil {
+		panic(err)
+	}
+
+	name := fp.Name()
+	fp.Close()
+
+	if err := os.Truncate(name, size); err != nil {
+		panic(err)
+	}
+
+	return cleaner{func() error { return os.Remove(name) }, "remove tempFile " + name}, name
 }
 
 func randStr(n int) string {
