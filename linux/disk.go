@@ -55,8 +55,7 @@ func getDiskType(udInfo disko.UdevInfo) (disko.DiskType, error) {
 	}
 
 	if isKvm() {
-		psuedoSsd := regexp.MustCompile("^ssd[0-9-]")
-		if psuedoSsd.MatchString(udInfo.Properties["ID_SERIAL"]) {
+		if strings.HasPrefix(udInfo.Properties["ID_SERIAL"], "ssd-") {
 			return disko.SSD, nil
 		}
 	}
