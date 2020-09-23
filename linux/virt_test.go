@@ -60,6 +60,6 @@ func TestVirtType(t *testing.T) {
 
 	if found != virtOracle {
 		t.Errorf("value not cached in systemVirtType. found %s expected %s\n",
-			string(found), string(virtOracle))
+			fmt.Sprint(found), fmt.Sprint(virtOracle))
 	}
 }
