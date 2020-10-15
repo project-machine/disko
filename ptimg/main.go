@@ -150,6 +150,7 @@ func getImageInfo(fname string) (qemuImageInfo, error) {
 
 func startQemuNBD(devPath, imgPath, imgFormat string) (func() error, error) {
 	var diskLen int64
+	const rcNotFound = 127
 
 	noCleanup := func() error { return nil }
 
@@ -171,7 +172,7 @@ func startQemuNBD(devPath, imgPath, imgFormat string) (func() error, error) {
 		"--format=" + imgFormat, "--connect=" + devPath, imgPath}
 	stdout, stderr, rc := runCommandWithOutputErrorRc(args...)
 
-	if rc == 127 { //nolint: gomnd
+	if rc == rcNotFound {
 		return noCleanup, fmt.Errorf("cmd failed.  Do you have qemu-nbd?")
 	} else if rc != 0 {
 		return noCleanup,
@@ -213,10 +214,11 @@ func waitForFileSize(devPath string) error {
 
 	defer fp.Close()
 
+	const waitTime, napLen = 30 * time.Second, 10 * time.Millisecond
+
 	diskLen := int64(0)
-	napLen := time.Millisecond * 10 //nolint: gomnd
 	startTime := time.Now()
-	endTime := startTime.Add(30 * time.Second) // nolint: gomnd
+	endTime := startTime.Add(waitTime)
 
 	for {
 		if diskLen, err = fp.Seek(0, io.SeekEnd); err != nil {
@@ -349,6 +351,8 @@ func connectNBD(fname string, imgFormat string) (func() error, string, error) {
 }
 
 func main() {
+	const maxPtSizeMiB = 10 * 1024
+
 	app := &cli.App{
 		Name:    "ptimg",
 		Usage:   "Partition and use free space in a disk image.",
@@ -382,7 +386,7 @@ func main() {
 			},
 			&cli.IntFlag{
 				Name:  "max-size",
-				Value: 10 * 1024, //nolint: gomnd
+				Value: maxPtSizeMiB,
 				Usage: "Maximum size in Mebibytes for partition",
 			},
 		},
@@ -401,6 +405,7 @@ func msgf(format string, a ...interface{}) {
 func createOrFindPartition(dSys disko.System, devPath string, ptname string, maxSize int) (uint, error) {
 	var err error
 	var ptNum uint
+	const size100M = 100 * disko.Mebibyte
 
 	disk, err := dSys.ScanDisk(devPath)
 	if err != nil {
@@ -416,7 +421,7 @@ func createOrFindPartition(dSys disko.System, devPath string, ptname string, max
 		}
 	}
 
-	freeList := disk.FreeSpacesWithMin(100 * disko.Mebibyte) //nolint: gomnd
+	freeList := disk.FreeSpacesWithMin(size100M)
 	if len(freeList) == 0 {
 		return 0, fmt.Errorf(
 			"could not find freespace on %s.  You can add space to it with "+

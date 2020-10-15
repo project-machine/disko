@@ -80,7 +80,7 @@ var Text = map[[16]byte]string{ // nolint:gochecknoglobals
 	BiosBoot:        "Bios Boot Partition",
 }
 
-// nolint: gomnd,gochecknoglobals
+// nolint: gochecknoglobals,gomnd
 var mapGPTToMBR = map[[16]byte]byte{
 	Empty:     0x00,
 	LinuxSwap: 0x82,

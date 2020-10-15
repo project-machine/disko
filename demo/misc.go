@@ -76,7 +76,7 @@ func pathExists(fpath string) bool {
 }
 
 func findPartInfo(diskPath string) (disko.Partition, error) {
-	const mysize = 200 * disko.Mebibyte //nolint: gomnd
+	const mysize = 200 * disko.Mebibyte
 	var err error
 
 	mysys := linux.System()
@@ -142,7 +142,7 @@ func miscUpDown(c *cli.Context) error {
 	var vg disko.VG
 	var lv disko.LV
 
-	var createMiB, extendMiB uint64 = 100, 48 //nolint: gomnd
+	var createMiB, extendMiB uint64 = 100, 48
 
 	if fname == "" {
 		return fmt.Errorf("must provide disk/file to partition")

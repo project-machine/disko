@@ -132,9 +132,9 @@ func waitForFileSize(devPath string) error {
 	defer fp.Close()
 
 	diskLen := int64(0)
-	napLen := time.Millisecond * 10 //nolint: gomnd
+	napLen := time.Millisecond * 10
 	startTime := time.Now()
-	endTime := startTime.Add(30 * time.Second) // nolint: gomnd
+	endTime := startTime.Add(30 * time.Second)
 
 	for {
 		if diskLen, err = fp.Seek(0, io.SeekEnd); err != nil {
