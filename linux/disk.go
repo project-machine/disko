@@ -24,6 +24,7 @@ import (
 const (
 	sectorSize512 = 512
 	sectorSize4k  = 4096
+	max32         = 0xFFFFFFFF
 )
 
 // ErrNoPartitionTable is returned if there is no partition table.
@@ -319,7 +320,7 @@ func getPartName(s string) [72]byte {
 
 	for i, r := range codes {
 		b[i*2] = byte(r)
-		b[i*2+1] = byte(r >> 8) //nolint:gomnd
+		b[i*2+1] = byte(r >> 8) // nolint:gomnd
 	}
 
 	return b
@@ -446,20 +447,23 @@ func addPartitionSetMBR(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 
 func rangeCheckParts(d disko.Disk, pSet disko.PartitionSet) error {
 	maxSize := d.Size
+
 	if d.Table == disko.MBR {
-		maxSize = uint64(0xFFFFFFFF) * uint64(d.SectorSize) //nolint: gomnd
+		maxSize = uint64(max32) * uint64(d.SectorSize)
 	}
 
 	maxEnd := ((maxSize - uint64(d.SectorSize)*33) / disko.Mebibyte) * disko.Mebibyte
 	minStart := disko.Mebibyte
 
-	minPartNum, maxPartNum := uint(1), uint(128) //nolint: gomnd
+	const minPartNum, maxPartNumMBR, maxPartNumGPT = 1, 4, 128
+
+	maxPartNum := uint(maxPartNumGPT)
 	if d.Table == disko.MBR {
-		maxPartNum = 4
+		maxPartNum = uint(maxPartNumMBR)
 	}
 
 	for _, p := range pSet {
-		if p.Number < minPartNum || p.Number > maxPartNum {
+		if p.Number < uint(minPartNum) || p.Number > maxPartNum {
 			return fmt.Errorf("partition number %d is out of range (%d-%d) for %s",
 				p.Number, minPartNum, maxPartNum, d.Table)
 		}
@@ -825,7 +829,7 @@ func newProtectiveMBR(buf []byte, sectorSize uint, diskSize uint64) (mbr.MBR, er
 	// length as 0xFFFFFFFF which is what windows and sfdisk do.
 	// sfdisk actually complains about our -1 value.
 	// see https://github.com/rekby/mbr/pull/2/files
-	max := uint64(0xFFFFFFFF) // nolint: gomnd
+	max := uint64(max32)
 	if diskSize/uint64(sectorSize) > max {
 		pt.SetLBALen(uint32(max) - 1)
 	} else {

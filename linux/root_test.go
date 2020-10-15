@@ -1,6 +1,6 @@
 // +build linux,!skipIntegration
 
-// nolint:errcheck,gomnd,funlen
+// nolint:errcheck,funlen
 package linux_test
 
 import (

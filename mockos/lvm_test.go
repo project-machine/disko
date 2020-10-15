@@ -143,7 +143,7 @@ func TestVG(t *testing.T) {
 	})
 }
 
-//nolint: gomnd,funlen
+//nolint: funlen
 func TestLV(t *testing.T) {
 	Convey("test lvm lvs", t, func() {
 		sys := mockos.System("testdata/model_sys.json")

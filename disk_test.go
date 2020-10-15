@@ -47,29 +47,29 @@ func TestPartitionSize(t *testing.T) {
 
 func TestDiskString(t *testing.T) {
 	mib := disko.Mebibyte
-	gb := uint64(1000 * 1000 * 1000) // nolint: gomnd
+	gb := uint64(1000 * 1000 * 1000)
 
 	d := disko.Disk{
 		Name:       "sde",
 		Path:       "/dev/sde",
 		Size:       gb,
-		SectorSize: 512, //nolint: gomnd
+		SectorSize: 512,
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 		Partitions: disko.PartitionSet{
-			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1},   //nolint: gomnd
-			3: {Start: 500 * mib, Last: 600*mib - 1, Number: 3}, //nolint: gomnd
+			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1},
+			3: {Start: 500 * mib, Last: 600*mib - 1, Number: 3},
 		},
 		UdevInfo: disko.UdevInfo{},
 	}
 	found := " " + d.String() + " "
 
 	// disk size 1gb = 953 MiB. 600 = (253-3) + (953-600)
-	expectedFree := 600 // nolint: gomnd
+	expectedFree := 600
 
 	for _, substr := range []string{
 		fmt.Sprintf("Size=%d", gb),
-		fmt.Sprintf("FreeSpace=%dMiB/2", expectedFree), //nolint: gomnd
+		fmt.Sprintf("FreeSpace=%dMiB/2", expectedFree),
 		fmt.Sprintf("NumParts=%d", len(d.Partitions))} {
 		if !strings.Contains(found, " "+substr+" ") {
 			t.Errorf("%s: missing expected substring ' %s '", found, substr)
@@ -83,11 +83,11 @@ func TestDiskDetails(t *testing.T) {
 		Name:       "sde",
 		Path:       "/dev/sde",
 		Size:       mib * mib,
-		SectorSize: 512, //nolint: gomnd
+		SectorSize: 512,
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 		Partitions: disko.PartitionSet{
-			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1}, //nolint: gomnd
+			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1},
 		},
 		UdevInfo: disko.UdevInfo{},
 	}
@@ -152,7 +152,7 @@ func TestPartitionSerializeJson(t *testing.T) {
 	myIDStr := "01234567-89AB-CDEF-0123-456789ABCDEF"
 	myID, _ := disko.StringToGUID(myIDStr)
 	p := disko.Partition{
-		Start:  3 * disko.Mebibyte, //nolint:gomnd
+		Start:  3 * disko.Mebibyte,
 		Last:   253*disko.Mebibyte - 1,
 		ID:     myID,
 		Type:   partid.EFI,
@@ -198,8 +198,8 @@ func TestPartitionUnserializeJson(t *testing.T) {
 	}
 
 	expected := disko.Partition{
-		Start:  3 * disko.Mebibyte,     // nolint:gomnd
-		Last:   253*disko.Mebibyte - 1, // nolint:gomnd
+		Start:  3 * disko.Mebibyte,
+		Last:   253*disko.Mebibyte - 1,
 		ID:     myID,
 		Type:   partid.EFI,
 		Name:   "my system part",
@@ -217,8 +217,8 @@ func TestDiskSerializeJson(t *testing.T) {
 	d := disko.Disk{
 		Name:       "sda",
 		Path:       "/dev/sda",
-		Size:       500 * disko.Mebibyte, //nolint:gomnd
-		SectorSize: 512,                  //nolint:gomnd
+		Size:       500 * disko.Mebibyte,
+		SectorSize: 512,
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 	}
@@ -247,8 +247,8 @@ func TestDiskUnserializeJson(t *testing.T) {
 	expected := disko.Disk{
 		Name:       "sda",
 		Path:       "/dev/sda",
-		Size:       500 * disko.Mebibyte, //nolint:gomnd
-		SectorSize: 512,                  //nolint:gomnd
+		Size:       500 * disko.Mebibyte,
+		SectorSize: 512,
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 	}

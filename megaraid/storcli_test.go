@@ -110,7 +110,6 @@ func TestParseCxDallShowNotConfigured(t *testing.T) {
 		t.Errorf("Expected %d pds found %d\n", exPlen, len(pds))
 	}
 
-	// nolint:gomnd
 	expected := DriveSet{
 		13: &Drive{ID: 13, EID: 62, Slot: 3, DriveGroup: -1,
 			MediaType: HDD, Model: "MZ6ER400HAGL/003", State: "UBUnsp"},
@@ -268,7 +267,6 @@ func TestNewController(t *testing.T) {
 }
 
 func TestJsonDriveGroupSet(t *testing.T) {
-	//nolint: gomnd
 	dgs := DriveGroupSet{
 		1: &DriveGroup{
 			ID: 1,

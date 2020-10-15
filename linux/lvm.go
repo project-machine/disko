@@ -201,7 +201,7 @@ func (ls *linuxLVM) HasPV(name string) bool {
 }
 
 func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
-	mdSize := 128 * disko.Mebibyte // nolint:gomnd
+	const mdSize = 128 * disko.Mebibyte
 	cmd := []string{"lvm", "vgcreate",
 		fmt.Sprintf("--metadatasize=%dB", mdSize),
 		"--zero=y", name}

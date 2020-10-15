@@ -192,14 +192,15 @@ func loadSections(cmdOut string) []scResultSection {
 
 func parseKeyValData(lines []string) map[string]string {
 	data := map[string]string{}
+	const tokNum2 = 2
 
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 
-		toks := strings.SplitN(line, " = ", 2)
-		if len(toks) != 2 { // nolint:gomnd
+		toks := strings.SplitN(line, " = ", tokNum2)
+		if len(toks) != tokNum2 {
 			continue
 		}
 
@@ -380,6 +381,7 @@ func parseCxDallShow(cmdOut string) (VirtDriveSet, DriveSet, error) {
 func parseVirtProperties(cmdOut string) (map[int](map[string]string), error) {
 	var vID int
 	var err error
+	const tokNum2 = 2
 
 	nameMatch := regexp.MustCompile("^VD([0-9]+) Properties$")
 	vdmap := map[int](map[string]string){}
@@ -403,7 +405,7 @@ func parseVirtProperties(cmdOut string) (map[int](map[string]string), error) {
 			// Extract the VirtDrive Number from the Name (VD0 Properties)
 			toks := nameMatch.FindStringSubmatch(sect.Name)
 
-			if len(toks) != 2 { // nolint: gomnd
+			if len(toks) != tokNum2 {
 				return vdmap, fmt.Errorf("failed parsing section '%s'", sect.Name)
 			}
 
@@ -468,6 +470,7 @@ func parseDriveGroupVal(val string) (int, error) {
 func pdDataToDrive(data map[string]string) (Drive, error) {
 	var err error
 	var dID, dg, eID, slot int
+	const tokNum2 = 2
 
 	if dID, err = parseIntOrDash(data["DID"]); err != nil {
 		return Drive{}, err
@@ -477,8 +480,8 @@ func pdDataToDrive(data map[string]string) (Drive, error) {
 		return Drive{}, err
 	}
 
-	toks := strings.SplitN(data["EID:Slt"], ":", 2)
-	if len(toks) != 2 { // nolint:gomnd
+	toks := strings.SplitN(data["EID:Slt"], ":", tokNum2)
+	if len(toks) != tokNum2 {
 		return Drive{},
 			fmt.Errorf(
 				"splitting EID:Slt data '%s' on ':'' returned %d fields, expected 2",
@@ -560,9 +563,11 @@ type cachingStorCli struct {
 
 // CachingStorCli - just a cache for a MegaRaid
 func CachingStorCli() MegaRaid {
+	const longTime = 5 * time.Minute
+
 	return &cachingStorCli{
 		mr:    &storCli{},
-		cache: cache.New(5*time.Minute, 5*time.Minute), //nolint: gomnd
+		cache: cache.New(longTime, longTime),
 	}
 }
 

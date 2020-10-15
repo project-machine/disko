@@ -169,7 +169,7 @@ func TestMyPartition(t *testing.T) {
 	defer os.RemoveAll(tmpd)
 
 	fpath := path.Join(tmpd, "mydisk")
-	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd
+	fsize := uint64(200 * 1024 * 1024)
 
 	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
@@ -243,7 +243,7 @@ func TestMyPartitionMBR(t *testing.T) {
 	defer os.RemoveAll(tmpd)
 
 	fpath := path.Join(tmpd, "mydisk")
-	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd
+	fsize := uint64(200 * 1024 * 1024)
 
 	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
@@ -308,11 +308,11 @@ func TestWipeDisk(t *testing.T) {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}
 
-	mib := uint64(1024 * 1024) // nolint: gomnd
+	mib := uint64(1024 * 1024)
 
 	defer os.RemoveAll(tmpd)
 
-	disk, err := genTempGptDisk(tmpd, 50*mib) // nolint:gomnd
+	disk, err := genTempGptDisk(tmpd, 50*mib)
 	if err != nil {
 		t.Fatalf("Creation of temp disk failed: %s", err)
 	}
@@ -402,7 +402,7 @@ func TestDeletePartition(t *testing.T) {
 
 	defer os.RemoveAll(tmpd)
 
-	disk, err := genTempGptDisk(tmpd, 200*1024*1024) // nolint:gomnd
+	disk, err := genTempGptDisk(tmpd, 200*1024*1024)
 	if err != nil {
 		t.Fatalf("Creation of temp disk failed: %s", err)
 	}
@@ -445,7 +445,7 @@ func TestBadPartition(t *testing.T) {
 	defer os.RemoveAll(tmpd)
 
 	fpath := path.Join(tmpd, "mydisk")
-	fsize := uint64(200 * 1024 * 1024) // nolint:gomnd
+	fsize := uint64(200 * 1024 * 1024)
 
 	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
@@ -466,7 +466,7 @@ func TestBadPartition(t *testing.T) {
 	myGUID := disko.GenGUID()
 
 	part := disko.Partition{
-		Start:  1024, // nolint:gomnd
+		Start:  1024,
 		Last:   fs[0].Last,
 		Type:   partid.LinuxLVM,
 		Name:   "mytest partition",
