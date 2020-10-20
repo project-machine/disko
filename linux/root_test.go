@@ -234,3 +234,98 @@ func TestRootLVMExtend(t *testing.T) {
 	foundLv = vgs[vgname].Volumes[lvname]
 	ast.Equalf(size2, foundLv.Size, "extended volume size incorrect")
 }
+
+func runShow(args ...string) {
+	out, err, rc := runCommandWithOutputErrorRc(args...)
+	fmt.Print(cmdString(args, out, err, rc))
+}
+
+func TestRootLVMCreate(t *testing.T) {
+	iSkipOrFail(t, isRoot, canUseLoop, canUseLVM)
+
+	ast := assert.New(t)
+
+	var cl = cleanList{}
+	defer cl.Cleanup(t)
+
+	var pv disko.PV
+	var vg disko.VG
+	var lv disko.LV
+	var c cleaner
+	var tmpFile string
+
+	lvthick := "diskot-thick" + randStr(8)
+	lvthinpool := "diskot-pool" + randStr(8)
+	lvthin := "diskot-thin" + randStr(8)
+	vgname := "diskot-vg" + randStr(8)
+
+	c, tmpFile = getTempFile(4 * GiB)
+	cl.Add(c)
+
+	lCleanup, disk, err := singlePartDisk(tmpFile)
+	cl.AddF(lCleanup, "singlePartdisk")
+
+	if err != nil {
+		t.Fatalf("Failed to create a single part disk: %s", err)
+	}
+
+	lvm := linux.VolumeManager()
+
+	pv, err = lvm.CreatePV(disk.Path + "p1")
+	if err != nil {
+		t.Fatalf("Failed to create pv on %s: %s\n", disk.Path, err)
+	}
+
+	cl.AddF(func() error { return lvm.DeletePV(pv) }, "remove pv")
+
+	vg, err = lvm.CreateVG(vgname, pv)
+
+	if err != nil {
+		t.Fatalf("Failed to create %s with %s: %s", vgname, pv.Path, err)
+	}
+
+	cl.AddF(func() error { return lvm.RemoveVG(vgname) }, "remove VG")
+
+	ast.Equal(vgname, vg.Name)
+
+	thickSize := uint64(12 * MiB)
+
+	lv, err = lvm.CreateLV(vgname, lvthick, thickSize, disko.THICK)
+	if err != nil {
+		t.Fatalf("Failed to create lv %s/%s: %s", vgname, lvthick, err)
+	}
+
+	cl.AddF(func() error { return lvm.RemoveLV(vgname, lvthick) }, "remove LV")
+
+	ast.Equal(lvthick, lv.Name)
+	ast.Equal(thickSize, lv.Size)
+
+	thinPoolSize, thinSize := uint64(500*MiB), uint64(200*MiB)
+
+	// create a THINPOOL volume
+	lv, err = lvm.CreateLV(vgname, lvthinpool, thinPoolSize, disko.THINPOOL)
+	if err != nil {
+		t.Fatalf("Failed to create lv %s/%s: %s", vgname, lvthick, err)
+	}
+
+	cl.AddF(func() error { return lvm.RemoveLV(vgname, lvthinpool) }, "remove thin pool LV")
+
+	ast.Equal(lvthinpool, lv.Name)
+	ast.Equal(thinPoolSize, lv.Size)
+
+	lv, err = lvm.CreateLV(vgname+"/"+lvthinpool, lvthin, thinSize, disko.THIN)
+	if err != nil {
+		runShow("lvm", "lvdisplay", "--unit=m", vgname)
+		t.Fatalf("Failed to create THIN lv %s on %s/%s: %s", lvthin, vgname, lvthinpool, err)
+	}
+
+	ast.Equal(lvthin, lv.Name)
+	ast.Equal(thinSize, lv.Size)
+
+	vgs, errScan := lvm.ScanVGs(func(v disko.VG) bool { return v.Name == vgname })
+	if errScan != nil {
+		t.Fatalf("Failed to scan VGs: %s\n", err)
+	}
+
+	ast.Equal(len(vgs), 1)
+}

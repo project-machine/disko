@@ -9,6 +9,9 @@ import (
 	"github.com/anuvu/disko"
 )
 
+const pvMetaDataSize = 128 * disko.Mebibyte
+const thinPoolMetaDataSize = 1024 * disko.Mebibyte
+
 // VolumeManager returns the linux implementation of disko.VolumeManager interface.
 func VolumeManager() disko.VolumeManager {
 	return &linuxLVM{}
@@ -201,9 +204,8 @@ func (ls *linuxLVM) HasPV(name string) bool {
 }
 
 func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
-	const mdSize = 128 * disko.Mebibyte
 	cmd := []string{"lvm", "vgcreate",
-		fmt.Sprintf("--metadatasize=%dB", mdSize),
+		fmt.Sprintf("--metadatasize=%dB", pvMetaDataSize),
 		"--zero=y", name}
 
 	for _, p := range pvs {
@@ -269,6 +271,25 @@ func (ls *linuxLVM) CryptClose(vgName string, lvName string,
 	return runCommand("cryptsetup", "close", decryptedName)
 }
 
+func createLVCmd(args ...string) error {
+	return runCommandSettled(
+		append([]string{"lvm", "lvcreate", "--ignoremonitoring", "--yes", "--activate=y",
+			"--setactivationskip=n"}, args...)...)
+}
+
+func createThinPool(name string, vgName string, size uint64, mdSize uint64) error {
+	// thinpool takes up size + 2*mdSize
+	// https://www.redhat.com/archives/linux-lvm/2020-October/thread.html#00016
+	args := []string{}
+	// if mdSize is zero, let lvcreate choose the size. That is documented as:
+	//  (Pool_LV_size / Pool_LV_chunk_size * 64)
+	if mdSize != 0 {
+		args = append(args, fmt.Sprintf("--poolmetadatasize=%dB", mdSize))
+	}
+
+	return createLVCmd(append(args, fmt.Sprintf("--size=%dB", size), "--thinpool="+name, vgName)...)
+}
+
 func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 	lvType disko.LVType) (disko.LV, error) {
 	nilLV := disko.LV{}
@@ -277,22 +298,35 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 		return nilLV, err
 	}
 
-	if lvType == disko.THIN {
-		// thin lv creation would require creating a pool
-		return nilLV, fmt.Errorf("not supported. Thin LV create not implemented")
+	nameFlag := "--name=" + name
+	sizeB := fmt.Sprintf("%dB", size)
+	vglv := vgLv(vgName, name)
+
+	switch lvType {
+	case disko.THIN:
+		// When creating THIN LV, the VG must be <vgname>/<thinLVName>
+		if !strings.Contains(vgName, "/") {
+			return nilLV,
+				fmt.Errorf("%s: vgName input for THIN LV name in format <vgname>/thinDataName", vgName)
+		}
+
+		vglv = vgLv(strings.Split(vgName, "/")[0], name)
+
+		if err := createLVCmd("--virtualsize="+sizeB, nameFlag, vgName); err != nil {
+			return nilLV, err
+		}
+	case disko.THICK:
+		if err := createLVCmd("--size="+sizeB, nameFlag, vgName); err != nil {
+			return nilLV, err
+		}
+	case disko.THINPOOL:
+		// When creating a THINPOOL, the name is the thin pool name.
+		if err := createThinPool(name, vgName, size, thinPoolMetaDataSize); err != nil {
+			return nilLV, err
+		}
 	}
 
-	err := runCommandSettled(
-		"lvm", "lvcreate", "--ignoremonitoring", "--yes", "--activate=y",
-		"--zero=y",
-		"--setactivationskip=n", fmt.Sprintf("--size=%dB", size),
-		fmt.Sprintf("--name=%s", name), vgName)
-
-	if err != nil {
-		return nilLV, err
-	}
-
-	lvs, err := ls.scanLVs(func(d disko.LV) bool { return true }, vgLv(vgName, name))
+	lvs, err := ls.scanLVs(func(d disko.LV) bool { return true }, vglv)
 
 	if err != nil {
 		return nilLV, err
