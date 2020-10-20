@@ -171,7 +171,8 @@ func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
 		return nilPV, err
 	}
 
-	err = runCommandSettled("lvm", "pvcreate", "--zero=y", path)
+	err = runCommandSettled("lvm", "pvcreate", "--zero=y",
+		fmt.Sprintf("--metadatasize=%dB", pvMetaDataSize), path)
 
 	if err != nil {
 		return nilPV, err
