@@ -18,6 +18,11 @@ jobs:
       run: |
         go mod download
 
+    - name: Install Deps
+      run: |
+        sudo apt-get update --quiet
+        sudo apt-get install --quiet --assume-yes --no-install-recommends lvm2 thin-provisioning-tools
+
     - name: build
       run: |
         make build
