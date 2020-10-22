@@ -84,6 +84,16 @@ func (ms *mockSys) CreatePartition(d disko.Disk, p disko.Partition) error {
 	return fmt.Errorf("disk %s does not exist", d.Name)
 }
 
+func (ms *mockSys) CreatePartitions(d disko.Disk, pSet disko.PartitionSet) error {
+	for _, p := range pSet {
+		if err := ms.CreatePartition(d, p); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (ms *mockSys) DeletePartition(d disko.Disk, number uint) error {
 	if disk, ok := ms.Disks[d.Name]; ok {
 		if _, ok := disk.Partitions[number]; !ok {

@@ -109,6 +109,64 @@ func TestSystem(t *testing.T) {
 			})
 		})
 
+		Convey("Calling CreatePartitions should create multiple partitions", func() {
+			disk := disko.Disk{
+				Name: "sda",
+			}
+			pSet := disko.PartitionSet{
+				1: disko.Partition{
+					Start:  0,
+					Last:   10000 - 1,
+					ID:     myID,
+					Type:   partid.LinuxFS,
+					Name:   "sda1",
+					Number: 1,
+				},
+				2: disko.Partition{
+					Start:  10000,
+					Last:   20000 - 1,
+					ID:     myID,
+					Type:   partid.LinuxFS,
+					Name:   "sda2",
+					Number: 2,
+				}}
+
+			// CreatePartition should probably only get the name
+			err := sys.CreatePartitions(disk, pSet)
+			So(err, ShouldBeNil)
+
+			d, _ := sys.ScanDisk("/dev/sda")
+			So(len(d.Partitions), ShouldEqual, len(pSet))
+			_, ok := d.Partitions[1]
+			So(ok, ShouldBeTrue)
+
+			_, ok = d.Partitions[2]
+			So(ok, ShouldBeTrue)
+
+			Convey("Calling DeletePartition should delete the partition with the specific number from a disk", func() {
+				disk := disko.Disk{
+					Name: "sda",
+				}
+
+				// DeletePartition should probably only get the name
+				err := sys.DeletePartition(disk, 1)
+				So(err, ShouldBeNil)
+
+				err = sys.DeletePartition(disk, 2)
+				So(err, ShouldBeNil)
+
+				err = sys.DeletePartition(disk, 10)
+				So(err, ShouldBeError)
+
+				d, _ := sys.ScanDisk("/dev/sda")
+				So(len(d.Partitions), ShouldEqual, 0)
+
+				disk.Name = "crap"
+				err = sys.DeletePartition(disk, 1)
+				So(err, ShouldBeError)
+			})
+		})
+
 		Convey("Calling CreatePartition on a disk not being track by system should return error", func() {
 			disk := disko.Disk{
 				Name: "invalid",

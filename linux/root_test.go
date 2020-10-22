@@ -99,12 +99,8 @@ func TestRootPartition(t *testing.T) {
 		Number: 3,
 	}
 
-	if err = lSys.CreatePartition(disk, part1); err != nil {
-		t.Fatalf("failed create partition %#v", part1)
-	}
-
-	if err = lSys.CreatePartition(disk, part3); err != nil {
-		t.Fatalf("failed create partition %#v", part3)
+	if err = lSys.CreatePartitions(disk, disko.PartitionSet{1: part1, 3: part3}); err != nil {
+		t.Fatalf("failed create partitions %s", err)
 	}
 
 	disk, err = lSys.ScanDisk(loopDev)
@@ -119,6 +115,28 @@ func TestRootPartition(t *testing.T) {
 	ast.Equal(part1, found1, "partition 1 differed")
 	ast.Equal(part3, found3, "partition 3 differed")
 	ast.Equal(uint64(100*MiB), disk.FreeSpaces()[0].Size(), "freespace gap wrong size")
+
+	// Now add a single partition
+	part2 := disko.Partition{
+		Start:  disk.FreeSpaces()[0].Start,
+		Last:   disk.FreeSpaces()[0].Last,
+		Type:   disko.PartType(partid.LinuxFS),
+		Name:   randStr(8),
+		Number: 2,
+	}
+
+	if err = lSys.CreatePartition(disk, part2); err != nil {
+		t.Fatalf("failed create partition %#v", part2)
+	}
+
+	disk, err = lSys.ScanDisk(loopDev)
+	if err != nil {
+		t.Errorf("Failed to scan loopDev %s", loopDev)
+	}
+
+	found2 := disk.Partitions[part2.Number]
+	ast.Equal(part2, found2, "partition 2 differed")
+	ast.Equal(uint64(100*MiB), found2.Size(), "partition 2 had wrong size")
 }
 
 func TestRootLVMExtend(t *testing.T) {
