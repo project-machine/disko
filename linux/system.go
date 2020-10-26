@@ -185,6 +185,14 @@ func (ls *linuxSystem) CreatePartition(d disko.Disk, p disko.Partition) error {
 	return udevSettle()
 }
 
+func (ls *linuxSystem) CreatePartitions(d disko.Disk, pSet disko.PartitionSet) error {
+	if err := addPartitionSet(d, pSet); err != nil {
+		return err
+	}
+
+	return udevSettle()
+}
+
 func (ls *linuxSystem) DeletePartition(d disko.Disk, number uint) error {
 	if err := deletePartitions(d, []uint{number}); err != nil {
 		return err

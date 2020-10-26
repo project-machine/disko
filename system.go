@@ -35,6 +35,9 @@ type System interface {
 	// partition number, type and disk offsets.
 	CreatePartition(Disk, Partition) error
 
+	// CreatePartitions creates multiple partitions on disk.
+	CreatePartitions(Disk, PartitionSet) error
+
 	// DeletePartition deletes the specified partition.
 	DeletePartition(Disk, uint) error
 
