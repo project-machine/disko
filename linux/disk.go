@@ -220,7 +220,7 @@ func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, disko.TableType, uint
 }
 
 func getDiskNames() ([]string, error) {
-	realDiskKnameRegex := regexp.MustCompile("^((s|v|xv|h)d[a-z]|nvme[0-9]n[0-9]+)$")
+	realDiskKnameRegex := regexp.MustCompile("^((s|v|xv|h)d[a-z]|nvme[0-9]n[0-9]|mmcblk[0-9]+)$")
 	disks := []string{}
 
 	files, err := ioutil.ReadDir("/sys/block")
