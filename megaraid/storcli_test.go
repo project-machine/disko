@@ -136,6 +136,13 @@ func TestParseCxDallNoController(t *testing.T) {
 	}
 }
 
+func TestParseCxDallUnsupportedController(t *testing.T) {
+	_, _, err := parseCxDallShow(dallUnsupported)
+	if err != ErrUnsupported {
+		t.Fatalf("storcli /c0/dall dallUnsupported expected ErrUnsupported found: %s", err)
+	}
+}
+
 func TestForeignDriveDall(t *testing.T) {
 	_, drives, err := parseCxDallShow(foreignDallBlob)
 
@@ -215,6 +222,13 @@ func TestParseVirtPropertiesNoController(t *testing.T) {
 	if err != ErrNoController {
 		t.Fatalf("storcli /c0/vall vallNoController expected ErrNoController found: %s",
 			err)
+	}
+}
+
+func TestParseVirtPropertiesUnsupported(t *testing.T) {
+	_, _, err := parseCxDallShow(vallUnsupported)
+	if err != ErrUnsupported {
+		t.Fatalf("storcli /c0/vall vallUnsupported expected ErrUnsupported found: %s", err)
 	}
 }
 
@@ -867,3 +881,16 @@ Description = Controller 0 not found
 
 // storcli /c0/dall show all
 var dallNoController = vallNoController
+
+// storcli /c0/vall show all
+// https://github.com/anuvu/disko/issues/98
+var vallUnsupported = `
+CLI Version = 007.1507.0000.0000 Sep 18, 2020
+Operating system = Linux 5.10.19stock-1
+Controller = 0
+Status = Failure
+Description = Un-supported command
+`
+
+// storcli /c0/dall show all
+var dallUnsupported = vallUnsupported

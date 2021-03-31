@@ -323,33 +323,47 @@ func cutTableLines(dataLines []string, cuts []int) []map[string]string {
 	return data
 }
 
+func isHeaderNotFound(header map[string]string) bool {
+	return header["Status"] == "Failure" &&
+		strings.Contains(header["Description"], "not found")
+}
+
+func isHeaderUnsupported(header map[string]string) bool {
+	return header["Status"] == "Failure" &&
+		strings.Contains(header["Description"], "Un-supported command")
+}
+
+func getHeaderError(header map[string]string) error {
+	if header["Status"] == "Success" {
+		return nil
+	}
+
+	if isHeaderNotFound(header) {
+		return ErrNoController
+	} else if isHeaderUnsupported(header) {
+		return ErrUnsupported
+	}
+
+	if _, err := strconv.Atoi(header["Controller"]); err != nil {
+		return fmt.Errorf("storcli controller in header not an int: %s", err)
+	}
+
+	return fmt.Errorf("storcli command returned status: %s", header["Status"])
+}
+
 func parseCxDallShow(cmdOut string) (VirtDriveSet, DriveSet, error) {
 	vds := VirtDriveSet{}
 	pds := DriveSet{}
-
-	var myHeader map[string]string
-	var err error
 
 	sections := loadSections(cmdOut)
 
 	for _, sect := range sections {
 		switch sect.Type {
 		case rsHeader:
-			myHeader = parseKeyValData(sect.Lines)
-
-			if myHeader["Status"] != "Success" {
-				if strings.Contains(myHeader["Description"], "not found") {
-					// Description = Controller 0 not found
-					return vds, pds, ErrNoController
-				}
-
-				return vds, pds,
-					fmt.Errorf("command failed. status: %s", myHeader["Status"])
+			if err := getHeaderError(parseKeyValData(sect.Lines)); err != nil {
+				return vds, pds, err
 			}
 
-			if _, err = strconv.Atoi(myHeader["Controller"]); err != nil {
-				return vds, pds, fmt.Errorf("controller in header not an int: %s", err)
-			}
 		case rsVdList:
 			data := parseTableData(sect.Lines)
 			for _, vdData := range data {
@@ -391,15 +405,8 @@ func parseVirtProperties(cmdOut string) (map[int](map[string]string), error) {
 	for _, sect := range sections {
 		switch sect.Type {
 		case rsHeader:
-			myHeader := parseKeyValData(sect.Lines)
-
-			if myHeader["Status"] != "Success" {
-				if strings.Contains(myHeader["Description"], "not found") {
-					// Description = Controller 0 not found
-					return vdmap, ErrNoController
-				}
-
-				return vdmap, fmt.Errorf("command failed. status: %s", myHeader["Status"])
+			if err := getHeaderError(parseKeyValData(sect.Lines)); err != nil {
+				return vdmap, err
 			}
 		case rsVirtProps:
 			// Extract the VirtDrive Number from the Name (VD0 Properties)

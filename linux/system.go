@@ -221,7 +221,8 @@ func (ls *linuxSystem) getDiskType(path string, udInfo disko.UdevInfo) (disko.Di
 				return disko.HDD, nil
 			}
 		}
-	} else if err != megaraid.ErrNoStorcli && err != megaraid.ErrNoController {
+	} else if err != megaraid.ErrNoStorcli && err != megaraid.ErrNoController &&
+		err != megaraid.ErrUnsupported {
 		return disko.HDD, err
 	}
 
