@@ -136,5 +136,8 @@ type MegaRaid interface {
 // ErrNoController - Error reported by Query if no controller is found.
 var ErrNoController = errors.New("megaraid Controller not found")
 
+// ErrUnsupported - Error reported by Query if controller is not supported.
+var ErrUnsupported = errors.New("megaraid Controller unsupported")
+
 // ErrNoStorcli - Error reported by Query if no storcli binary in PATH
 var ErrNoStorcli = errors.New("no 'storcli' command in PATH")
