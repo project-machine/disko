@@ -340,8 +340,8 @@ func wipeDisk(disk disko.Disk) error {
 	for _, p := range disk.Partitions {
 		// The point of this operation is to wipe.  Avoid out of range errors
 		// that could happen as part of a bad partition table.
-		end := disk.Size
-		if end > p.Last {
+		end := p.Last
+		if end > disk.Size {
 			end = disk.Size
 		}
 
