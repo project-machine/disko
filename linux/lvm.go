@@ -288,7 +288,7 @@ func createThinPool(name string, vgName string, size uint64, mdSize uint64) erro
 		args = append(args, fmt.Sprintf("--poolmetadatasize=%dB", mdSize))
 	}
 
-	return createLVCmd(append(args, fmt.Sprintf("--size=%dB", size), "--thinpool="+name, vgName)...)
+	return createLVCmd(append(args, "--zero=y", fmt.Sprintf("--size=%dB", size), "--thinpool="+name, vgName)...)
 }
 
 func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
@@ -313,11 +313,12 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 
 		vglv = vgLv(strings.Split(vgName, "/")[0], name)
 
+		// creation of thin volumes are always zero'd, and passing '--zero=y' will fail.
 		if err := createLVCmd("--virtualsize="+sizeB, nameFlag, vgName); err != nil {
 			return nilLV, err
 		}
 	case disko.THICK:
-		if err := createLVCmd("--size="+sizeB, nameFlag, vgName); err != nil {
+		if err := createLVCmd("--zero=y", "--size="+sizeB, nameFlag, vgName); err != nil {
 			return nilLV, err
 		}
 	case disko.THINPOOL:
