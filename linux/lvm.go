@@ -288,7 +288,8 @@ func createThinPool(name string, vgName string, size uint64, mdSize uint64) erro
 		args = append(args, fmt.Sprintf("--poolmetadatasize=%dB", mdSize))
 	}
 
-	return createLVCmd(append(args, "--zero=y", fmt.Sprintf("--size=%dB", size), "--thinpool="+name, vgName)...)
+	return createLVCmd(append(args, "--zero=y", "--wipesignatures=y",
+		fmt.Sprintf("--size=%dB", size), "--thinpool="+name, vgName)...)
 }
 
 func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
@@ -318,7 +319,7 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 			return nilLV, err
 		}
 	case disko.THICK:
-		if err := createLVCmd("--zero=y", "--size="+sizeB, nameFlag, vgName); err != nil {
+		if err := createLVCmd("--zero=y", "--wipesignatures=y", "--size="+sizeB, nameFlag, vgName); err != nil {
 			return nilLV, err
 		}
 	case disko.THINPOOL:
@@ -429,12 +430,13 @@ func getLuksInfo(devpath string) (bool, string, string, error) {
 	} else if rc != 0 {
 		return crypt, "", "", cmdError(cmd, stdout, stderr, rc)
 	}
+	// prefix looks like CRYPT-LUKS[12]-<luksUUID-without-spaces>-
+	bareID := strings.ReplaceAll(string(chompBytes(stdout)), "-", "")
+	luks1 := "CRYPT-LUKS1-" + bareID + "-"
+	luks2 := "CRYPT-LUKS2-" + bareID + "-"
 
 	crypt = true
 	minFields := 4
-	// prefix looks like CRYPT-LUKS1-<luksUUID-without-spaces>-
-	prefix := "CRYPT-LUKS1-" +
-		strings.ReplaceAll(string(chompBytes(stdout)), "-", "") + "-"
 
 	cmd = []string{"dmsetup", "table", "--concise"}
 	stdout, stderr, rc = runCommandWithOutputErrorRc(cmd...)
@@ -455,7 +457,7 @@ func getLuksInfo(devpath string) (bool, string, string, error) {
 					len(fields), minFields, record)
 		}
 
-		if strings.HasPrefix(fields[1], prefix) {
+		if strings.HasPrefix(fields[1], luks1) || strings.HasPrefix(fields[1], luks2) {
 			return crypt, fields[0], "/dev/mapper/" + fields[0], nil
 		}
 	}

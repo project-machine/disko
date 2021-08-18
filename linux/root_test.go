@@ -347,3 +347,161 @@ func TestRootLVMCreate(t *testing.T) {
 
 	ast.Equal(len(vgs), 1)
 }
+
+func getTempVG(size int64, cl *cleanList) (string, error) {
+	var pv disko.PV
+	var vg disko.VG
+	var c cleaner
+	var tmpFile string
+
+	vgname := "diskot-vg" + randStr(8)
+
+	c, tmpFile = getTempFile(size)
+	cl.Add(c)
+
+	lCleanup, disk, err := singlePartDisk(tmpFile)
+	cl.AddF(lCleanup, "singlePartdisk")
+
+	if err != nil {
+		return vgname, fmt.Errorf("failed to create a single part disk: %s", err)
+	}
+
+	lvm := linux.VolumeManager()
+
+	pv, err = lvm.CreatePV(disk.Path + "p1")
+	if err != nil {
+		return vgname, fmt.Errorf("failed to create pv on %s: %s", disk.Path, err)
+	}
+
+	cl.AddF(func() error { return lvm.DeletePV(pv) }, "remove pv")
+
+	vg, err = lvm.CreateVG(vgname, pv)
+
+	if err != nil {
+		return vgname, fmt.Errorf("failed to create %s with %s: %s", vgname, pv.Path, err)
+	}
+
+	cl.AddF(func() error { return lvm.RemoveVG(vgname) }, "remove VG")
+
+	if vgname != vg.Name {
+		return vgname, fmt.Errorf("expected vgname '%s', found '%s'", vgname, vg.Name)
+	}
+
+	return vgname, nil
+}
+
+func createLV(vg string, name string, size uint64, secret string) (cleanList, error) {
+	cl := cleanList{}
+	lvm := linux.VolumeManager()
+
+	lv, err := lvm.CreateLV(vg, name, size, disko.THICK)
+	if err != nil {
+		return cl, err
+	}
+
+	cl.AddF(func() error { return lvm.RemoveLV(vg, name) }, "remove LV")
+
+	// Just check the newly created LV that it has "enough" zeros
+	enoughZeros := 4096
+	buf := make([]byte, enoughZeros)
+
+	devFile, err := os.Open(lv.Path)
+	if err != nil {
+		return cl, fmt.Errorf("failed to open device '%s': %v", lv.Path, err)
+	}
+
+	rlen, err := devFile.Read(buf)
+	devFile.Close()
+
+	if err != nil {
+		return cl, fmt.Errorf("failed to read from device '%s': %v", lv.Path, err)
+	} else if rlen != enoughZeros {
+		return cl, fmt.Errorf("Expected to read %d from device '%s', only read %d", enoughZeros, lv.Path, rlen)
+	}
+
+	for i := 0; i < enoughZeros; i++ {
+		if buf[i] != 0 {
+			return cl, fmt.Errorf("device '%s' did not have enough zeros: %v", lv.Path, buf)
+		}
+	}
+
+	if secret != "" {
+		if err := lvm.CryptFormat(vg, name, secret); err != nil {
+			return cl, err
+		}
+
+		ptName := name + "_" + randStr(8)
+		if err := lvm.CryptOpen(vg, name, ptName, secret); err != nil {
+			return cl, err
+		}
+
+		cl.AddF(func() error { return lvm.CryptClose(vg, name, ptName) }, "close crypt "+name)
+	}
+
+	vgs, err := lvm.ScanVGs(func(v disko.VG) bool { return v.Name == vg })
+	if err != nil {
+		return cl, fmt.Errorf("failed scan volumes: %s", err)
+	}
+
+	foundLv, ok := vgs[vg].Volumes[name]
+	if !ok {
+		return cl, fmt.Errorf("Did not find vg/lv '%s/%s' in scan", vg, name)
+	}
+
+	devPath := foundLv.Path
+	if secret != "" {
+		devPath = foundLv.DecryptedLVPath
+	}
+
+	if err := runCommand("mkfs.ext4", "-F", "-L"+name, devPath); err != nil {
+		return cl, fmt.Errorf("Failed to mkfs on %s: %s", devPath, err)
+	}
+
+	return cl, nil
+}
+
+// TestRootLVMRecreate - create, some volumes, remove them and then recreate in the
+// same order.a thick volume encrypted volume with filesystem.
+// remove it and then do the same.
+func TestRootLVMRecreate(t *testing.T) {
+	iSkipOrFail(t, isRoot, canUseLoop, canUseLVM)
+
+	var cl = cleanList{}
+	defer cl.Cleanup(t)
+
+	vgname, err := getTempVG(4*GiB, &cl)
+	if err != nil {
+		t.Fatalf("Failed to get a temp VG: %v", err)
+	}
+
+	type lvInfo struct {
+		Name     string
+		Size     uint64
+		cleanups cleanList
+	}
+
+	for _, runName := range []string{"initial", "secret", "plain"} {
+		lvdatas := []*lvInfo{
+			{"lv1", 128 * MiB, cleanList{}},
+			{"lv2", 128 * MiB, cleanList{}},
+		}
+
+		secret := runName
+		if runName == "plain" {
+			secret = ""
+		}
+
+		for _, lvd := range lvdatas {
+			if cl, err := createLV(vgname, lvd.Name, lvd.Size, secret); err != nil {
+				cl.Cleanup(t)
+				t.Fatalf("Failed create %s - %s: %v", runName, lvd.Name, err)
+			} else {
+				lvd.cleanups = cl
+			}
+		}
+
+		for _, lvd := range lvdatas {
+			lvd.cleanups.Cleanup(t)
+		}
+	}
+}
