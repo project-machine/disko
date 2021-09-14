@@ -240,6 +240,8 @@ type Property string
 const (
 	// Ephemeral - A cloud ephemeral disk.
 	Ephemeral Property = "EPHEMERAL"
+	// ReadOnly  - A disk that cannot be modified, writes fail
+	ReadOnly Property = "READ-ONLY"
 )
 
 // PropertySet - a group of properties of a disk
