@@ -2,6 +2,7 @@ package linux
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -83,6 +84,25 @@ func (ls *linuxSystem) ScanDisks(filter disko.DiskFilter,
 	return disks, nil
 }
 
+func getDiskReadOnlyProperty(d disko.UdevInfo) (bool, error) {
+	syspath, err := getSysPathForBlockDevicePath(d.Name)
+	if err != nil {
+		return false, err
+	}
+
+	syspathReadOnly := syspath + "/ro"
+	if disko.PathExists(syspathReadOnly) {
+		content, err := ioutil.ReadFile(syspathReadOnly)
+		if err != nil {
+			return false, fmt.Errorf("failed to read %s for %s", syspathReadOnly, d.Name)
+		}
+		if string(content) == "1\n" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func getDiskProperties(d disko.UdevInfo) disko.PropertySet {
 	props := disko.PropertySet{}
 
@@ -92,6 +112,12 @@ func getDiskProperties(d disko.UdevInfo) disko.PropertySet {
 
 	if d.Properties["ID_MODEL"] == "Amazon EC2 NVMe Instance Storage" {
 		props[disko.Ephemeral] = true
+	}
+
+	readOnly, err := getDiskReadOnlyProperty(d)
+	// only mark read-only prop if set
+	if err == nil && readOnly {
+		props[disko.ReadOnly] = readOnly
 	}
 
 	return props

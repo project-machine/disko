@@ -100,15 +100,18 @@ func diskShow(c *cli.Context) error {
 }
 
 func getDiskSet(mysys disko.System, paths ...string) (disko.DiskSet, error) {
-	matchAll := func(d disko.Disk) bool {
+	matchAllSkipReadOnly := func(d disko.Disk) bool {
+		if _, ok := d.Properties[disko.ReadOnly]; ok == true {
+			return false
+		}
 		return true
 	}
 
 	if len(paths) == 0 || (len(paths) == 1 && paths[0] == "all") {
-		return mysys.ScanAllDisks(matchAll)
+		return mysys.ScanAllDisks(matchAllSkipReadOnly)
 	}
 
-	return mysys.ScanDisks(matchAll, paths...)
+	return mysys.ScanDisks(matchAllSkipReadOnly, paths...)
 }
 
 func diskWipe(c *cli.Context) error {
