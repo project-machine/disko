@@ -28,7 +28,7 @@ const (
 )
 
 // ErrNoPartitionTable is returned if there is no partition table.
-var ErrNoPartitionTable error = errors.New("no Partition Table Found")
+var ErrNoPartitionTable = errors.New("no Partition Table Found")
 
 // nolint: gochecknoglobals
 var xenbusSysPathMatch = regexp.MustCompile(`/devices/vbd-\d+/block/`)
@@ -266,7 +266,7 @@ func getSysPathForBlockDevicePath(dev string) (string, error) {
 	// Return the path in /sys/class/block/<device> for a given
 	// block device kname or path.
 	var syspath string
-	var sysdir string = "/sys/class/block"
+	var sysdir = "/sys/class/block"
 
 	if strings.Contains(dev, "/") {
 		// after symlink resolution, devpath = '/dev/sda' or '/dev/sdb1'
