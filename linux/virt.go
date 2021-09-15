@@ -74,7 +74,7 @@ func getVirtTypeIface(sdv detector) virtType {
 	out, stderr, rc := sdv.detectVirt()
 
 	if rc == 0 || rc == 1 {
-		var strOut string = ""
+		var strOut string
 		if len(out) > 1 {
 			strOut = string(out[:len(out)-1])
 		}
