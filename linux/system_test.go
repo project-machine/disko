@@ -88,7 +88,7 @@ func genEmptyDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 		SectorSize: sectorSize512,
 	}
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
+	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
 		return disk, fmt.Errorf("Failed to write to a temp file: %s", err)
 	}
 
