@@ -3,11 +3,11 @@ package linux_test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path"
