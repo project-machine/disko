@@ -128,7 +128,7 @@ func genTempGptDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 		SectorSize: sectorSize512,
 	}
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
+	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
 		return disk, fmt.Errorf("Failed to write to a temp file: %s", err)
 	}
 
@@ -171,7 +171,7 @@ func TestMyPartition(t *testing.T) {
 	fpath := path.Join(tmpd, "mydisk")
 	fsize := uint64(200 * 1024 * 1024)
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
+	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
 	}
 
@@ -245,7 +245,7 @@ func TestMyPartitionMBR(t *testing.T) {
 	fpath := path.Join(tmpd, "mydisk")
 	fsize := uint64(200 * 1024 * 1024)
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
+	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
 	}
 
@@ -447,7 +447,7 @@ func TestBadPartition(t *testing.T) {
 	fpath := path.Join(tmpd, "mydisk")
 	fsize := uint64(200 * 1024 * 1024)
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0644); err != nil {
+	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
 	}
 
