@@ -35,7 +35,7 @@ gofmt: .gofmt
 lint: .lint
 
 .lint: $(ALL_GO_FILES)
-	golangci-lint run --enable-all
+	golangci-lint run
 	@touch $@
 
 test:
