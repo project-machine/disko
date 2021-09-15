@@ -178,7 +178,7 @@ func readMBRTable(fp io.ReadSeeker) (disko.PartitionSet, error) {
 	return parts, nil
 }
 
-func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, disko.TableType, uint, error) { // nolint: unparam
+func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, disko.TableType, uint, error) {
 	var err error
 	var ssize uint
 	var gptTable gpt.Table
