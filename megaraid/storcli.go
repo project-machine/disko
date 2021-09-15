@@ -128,9 +128,9 @@ func newController(cID int, cxDxOut string, cxVxOut string) (Controller, error) 
 
 // loadSections - parse a storcli output into sections.
 func loadSections(cmdOut string) []scResultSection {
-	var header bool = false
+	var header = false
 	var curSect scResultSection
-	var last string = ""
+	var last string
 
 	equalLine := regexp.MustCompile("^[=]+$")
 	rSects := []scResultSection{}
@@ -363,6 +363,8 @@ func parseCxShow(cmdOut string) (VirtDriveSet, DriveSet, error) {
 	sections := loadSections(cmdOut)
 
 	for _, sect := range sections {
+		// Missing Cases: rsDgDriveList, rsUnknown, rsVirtDisk, rsVirtProps
+		//exhaustive:ignore
 		switch sect.Type {
 		case rsHeader:
 			if err := getHeaderError(parseKeyValData(sect.Lines)); err != nil {
@@ -408,6 +410,8 @@ func parseVirtProperties(cmdOut string) (map[int](map[string]string), error) {
 	sections := loadSections(cmdOut)
 
 	for _, sect := range sections {
+		// Missing cases: rsDgDriveList, rsPhysDisks, rsUnknown, rsVdList, rsVirtDisk
+		//exhaustive:ignore
 		switch sect.Type {
 		case rsHeader:
 			if err := getHeaderError(parseKeyValData(sect.Lines)); err != nil {
