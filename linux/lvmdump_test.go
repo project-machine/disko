@@ -9,7 +9,7 @@ import (
 
 var size1 uint64 = 27514634240
 var size2 uint64 = 55029268480
-var size3 uint64 = size2 * 2
+var size3 = size2 * 2
 
 func asBS(b uint64) string {
 	return fmt.Sprintf("%dB", b)
