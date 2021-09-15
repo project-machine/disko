@@ -460,7 +460,6 @@ func createOrFindPartition(dSys disko.System, devPath string, ptname string, max
 	return ptNum, err
 }
 
-//nolint: funlen
 func handleMount(cpSrc string, exCmd []string, devPath string, subs map[string]string) error {
 	var tempDir, mountPoint string
 	var err error
