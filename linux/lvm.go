@@ -304,6 +304,8 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 	sizeB := fmt.Sprintf("%dB", size)
 	vglv := vgLv(vgName, name)
 
+	// Missing cases: LVTypeUnknown
+	//exhaustive:ignore
 	switch lvType {
 	case disko.THIN:
 		// When creating THIN LV, the VG must be <vgname>/<thinLVName>
