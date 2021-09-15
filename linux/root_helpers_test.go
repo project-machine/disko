@@ -1,4 +1,3 @@
-// nolint:errcheck
 package linux_test
 
 import (
