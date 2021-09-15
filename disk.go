@@ -375,7 +375,7 @@ func (d *Disk) FreeSpaces() []FreeSpace {
 }
 
 func (d Disk) String() string {
-	var avail uint64 = 0
+	var avail uint64
 
 	fs := d.FreeSpaces()
 
@@ -402,7 +402,7 @@ func (d Disk) String() string {
 // Details returns the disk details as a table formatted string.
 func (d Disk) Details() string {
 	fss := d.FreeSpaces()
-	var fsn int = 0
+	var fsn int
 
 	mbsize := func(n, o uint64) string {
 		if (n+o)%Mebibyte == 0 {
