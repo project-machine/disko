@@ -9,9 +9,7 @@ import (
 
 func readReportUint64(s string) uint64 {
 	// lvm --report-format=json --unit=B puts unit 'B' at end of all sizes.
-	if strings.HasSuffix(s, "B") {
-		s = s[:len(s)-1]
-	}
+	s = strings.TrimSuffix(s, "B")
 
 	num, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
