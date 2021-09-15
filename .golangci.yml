@@ -24,7 +24,6 @@ linters:
     - gocritic
     - gocyclo
     - gofmt
-    - gomnd
     - goprintffuncname
     - gosec
     - gosimple
@@ -55,6 +54,7 @@ linters:
   # - godot
   # - godox
   # - goerr113
+  # - gomnd
   # - maligned
   # - nestif
   # - prealloc
@@ -73,9 +73,3 @@ issues:
   exclude-rules:
     - linters: ["gocritic"]
       text: "ifElseChain:"
-    # 1 is not a magic number. 3 is a magic number.
-    - linters: ["gomnd"]
-      text: "Magic number: 1,"
-    # test files can have globals and magic numbers.
-    - linters: ["gochecknoglobals", "gomnd"]
-      path: _test.go
