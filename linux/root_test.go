@@ -85,6 +85,7 @@ func TestRootPartition(t *testing.T) {
 	part1 := disko.Partition{
 		Start:  disk.FreeSpaces()[0].Start,
 		Last:   disk.FreeSpaces()[0].Start + (100 * MiB) - 1,
+		ID:     disko.GUID{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
 		Type:   disko.PartType(partid.LinuxRootX86),
 		Name:   randStr(10),
 		Number: 1,
@@ -94,6 +95,7 @@ func TestRootPartition(t *testing.T) {
 	part3 := disko.Partition{
 		Start:  part1.Last + 100*MiB + 1,
 		Last:   disk.FreeSpaces()[0].Last,
+		ID:     disko.GUID{0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa},
 		Type:   disko.PartType(partid.LinuxFS),
 		Name:   randStr(8),
 		Number: 3,
@@ -120,6 +122,7 @@ func TestRootPartition(t *testing.T) {
 	part2 := disko.Partition{
 		Start:  disk.FreeSpaces()[0].Start,
 		Last:   disk.FreeSpaces()[0].Last,
+		ID:     disko.GUID{0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9},
 		Type:   disko.PartType(partid.LinuxFS),
 		Name:   randStr(8),
 		Number: 2,
