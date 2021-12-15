@@ -126,6 +126,7 @@ func genTempGptDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 		Path:       fpath,
 		Size:       fsize,
 		SectorSize: sectorSize512,
+		Table:      disko.GPT,
 	}
 
 	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
@@ -425,15 +426,84 @@ func TestDeletePartition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed delete partition 1: %s", err)
 	}
+}
+
+func TestUpdatePartition(t *testing.T) {
+	tmpd, err := ioutil.TempDir("", "disko_test")
+	if err != nil {
+		t.Fatalf("Failed to create tempdir: %s", err)
+	}
+
+	defer os.RemoveAll(tmpd)
+
+	disk, err := genTempGptDisk(tmpd, 200*1024*1024)
+	if err != nil {
+		t.Fatalf("Creation of temp disk failed: %s", err)
+	}
+
+	fp, err := os.Open(disk.Path)
+	if err != nil {
+		t.Fatalf("Failed to open file after writing it: %s", err)
+	}
+
+	pSet, _, _, err := findPartitions(fp)
+	if err != nil {
+		t.Fatalf("Failed to find partitions")
+	}
+
+	pOrig := pSet[1]
+	numOrig := len(pSet)
+
+	fp.Close()
+
+	myID, err := disko.StringToGUID("ABCDEF01-2345-6789-ABCD-EF0123456789")
+	if err != nil {
+		t.Fatalf("Failed to convert guid")
+	}
+
+	myType, err := disko.StringToPartType("A0B0C0D0-E0F0-A1B1-C1D1-E1F1A2B2C2D2")
+	if err != nil {
+		t.Fatalf("Failed to convert string to parttype")
+	}
+
+	newPSet := disko.PartitionSet{
+		1: disko.Partition{
+			Type:   myType,
+			Name:   "new name",
+			ID:     myID,
+			Number: 1,
+		},
+	}
+
+	err = updatePartitions(disk, newPSet)
+	if err != nil {
+		t.Fatalf("Failed update partition 1: %s", err)
+	}
+
+	fp, err = os.Open(disk.Path)
+	if err != nil {
+		t.Fatalf("Failed to open file after writing it: %s", err)
+	}
 
 	pSet, _, _, err = findPartitions(fp)
 	if err != nil {
 		t.Fatalf("Failed to re-findPartitions on %s: %s", disk.Path, err)
 	}
 
-	if len(pSet) != 0 {
-		t.Fatalf("There were %d partitions after delete, expected 0", len(pSet))
+	fp.Close()
+
+	expected := disko.Partition{
+		Type:   myType,
+		Name:   "new name",
+		ID:     myID,
+		Number: 1,
+		Start:  pOrig.Start,
+		Last:   pOrig.Last,
 	}
+	assert := assert.New(t)
+	assert.Equal(expected, pSet[1])
+
+	assert.Equalf(numOrig, len(pSet), "Expected %d partitions, but now have %d", numOrig, len(pSet))
 }
 
 func TestBadPartition(t *testing.T) {

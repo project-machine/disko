@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/anuvu/disko"
@@ -56,6 +57,45 @@ func singlePartDisk(filePath string) (func() error, disko.Disk, error) {
 	return cleanup, disk, err
 }
 
+func pathExistsNoErr(d string) error {
+	_, err := os.Stat(d)
+	if err == nil {
+		return nil
+	}
+
+	return err
+}
+
+func partPathsExist(diskPath string, pNums ...uint) error {
+	missing := []string{}
+
+	for _, num := range pNums {
+		p := linux.GetPartitionKname(diskPath, num)
+		if _, err := os.Stat(p); err != nil && os.IsNotExist(err) {
+			missing = append(missing, p)
+		} else if err != nil {
+			missing = append(missing, fmt.Sprintf("%s: %v", p, err))
+		}
+	}
+
+	if len(missing) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("Missing partition paths: %s", strings.Join(missing, " | "))
+}
+
+// toGUID - just reuturn a disko.GUID or panic trying.
+func toGUID(guidstr string) disko.GUID {
+	g, err := disko.StringToGUID(guidstr)
+	if err != nil {
+		panic(fmt.Sprintf(
+			"Failed to convert '%s' to a disko.GUID with Disko.StringToGUID: %v", guidstr, err))
+	}
+
+	return g
+}
+
 func TestRootPartition(t *testing.T) {
 	iSkipOrFail(t, isRoot, canUseLoop)
 	var loopDev string
@@ -83,20 +123,22 @@ func TestRootPartition(t *testing.T) {
 		t.Fatalf("Failed first scan of %s: %s\n", loopDev, err)
 	}
 
+	guid1 := toGUID("b812fcfe-6364-415c-bf99-9d89fa7bb132")
 	part1 := disko.Partition{
 		Start:  disk.FreeSpaces()[0].Start,
 		Last:   disk.FreeSpaces()[0].Start + (100 * MiB) - 1,
-		ID:     disko.GUID{0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8},
+		ID:     guid1,
 		Type:   disko.PartType(partid.LinuxRootX86),
 		Name:   randStr(10),
 		Number: 1,
 	}
 
 	// part3 leaves 100MiB gap to verify FreeSpaces
+	guid3 := toGUID("51ad8a81-4176-401c-940b-44962660add9")
 	part3 := disko.Partition{
 		Start:  part1.Last + 100*MiB + 1,
 		Last:   disk.FreeSpaces()[0].Last,
-		ID:     disko.GUID{0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa},
+		ID:     guid3,
 		Type:   disko.PartType(partid.LinuxFS),
 		Name:   randStr(8),
 		Number: 3,
@@ -104,6 +146,10 @@ func TestRootPartition(t *testing.T) {
 
 	if err = lSys.CreatePartitions(disk, disko.PartitionSet{1: part1, 3: part3}); err != nil {
 		t.Fatalf("failed create partitions %s", err)
+	}
+
+	if err := partPathsExist(disk.Path, 1, 3); err != nil {
+		t.Errorf("paths did not exist after CreatePartitions: %v", err)
 	}
 
 	disk, err = lSys.ScanDisk(loopDev)
@@ -120,10 +166,11 @@ func TestRootPartition(t *testing.T) {
 	ast.Equal(uint64(100*MiB), disk.FreeSpaces()[0].Size(), "freespace gap wrong size")
 
 	// Now add a single partition
+	guid2 := toGUID("57ad0705-524f-4592-98b8-a4a7aa0efa90")
 	part2 := disko.Partition{
 		Start:  disk.FreeSpaces()[0].Start,
 		Last:   disk.FreeSpaces()[0].Last,
-		ID:     disko.GUID{0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9},
+		ID:     guid2,
 		Type:   disko.PartType(partid.LinuxFS),
 		Name:   randStr(8),
 		Number: 2,
@@ -131,6 +178,10 @@ func TestRootPartition(t *testing.T) {
 
 	if err = lSys.CreatePartition(disk, part2); err != nil {
 		t.Fatalf("failed create partition %#v", part2)
+	}
+
+	if err := partPathsExist(disk.Path, 2, 1, 3); err != nil {
+		t.Errorf("paths did not exist after CreatePartitions: %v", err)
 	}
 
 	disk, err = lSys.ScanDisk(loopDev)
@@ -141,6 +192,162 @@ func TestRootPartition(t *testing.T) {
 	found2 := disk.Partitions[part2.Number]
 	ast.Equal(part2, found2, "partition 2 differed")
 	ast.Equal(uint64(100*MiB), found2.Size(), "partition 2 had wrong size")
+}
+
+func TestRootPartitionUpdate(t *testing.T) {
+	iSkipOrFail(t, isRoot, canUseLoop)
+	var loopDev string
+
+	ast := assert.New(t)
+
+	var cl = cleanList{}
+	defer cl.Cleanup(t)
+
+	c, tmpFile := getTempFile(GiB)
+	cl.Add(c)
+
+	if cleanup, path, err := connectLoop(tmpFile); err != nil {
+		runLog("losetup", "-a")
+		t.Fatalf("failed loop: %s\n", err)
+	} else {
+		cl.AddF(cleanup, "detach loop "+tmpFile)
+		loopDev = path
+	}
+
+	lSys := linux.System()
+
+	disk, err := lSys.ScanDisk(loopDev)
+	if err != nil {
+		t.Fatalf("Failed first scan of %s: %s\n", loopDev, err)
+	}
+
+	guid1 := toGUID("22a12a35-2912-473b-b68e-a4465cdc09dc")
+	part1 := disko.Partition{
+		Start:  disk.FreeSpaces()[0].Start,
+		Last:   disk.FreeSpaces()[0].Start + (100 * MiB) - 1,
+		Type:   disko.PartType(partid.LinuxRootX86),
+		Name:   "original name",
+		Number: 1,
+		ID:     guid1,
+	}
+
+	if err = lSys.CreatePartitions(disk, disko.PartitionSet{1: part1}); err != nil {
+		t.Fatalf("failed create partitions %s", err)
+	}
+
+	if err := partPathsExist(disk.Path, 1); err != nil {
+		t.Errorf("paths did not exist after CreatePartitions: %v", err)
+	}
+
+	disk, err = lSys.ScanDisk(loopDev)
+	if err != nil {
+		t.Errorf("Failed to scan after create")
+	}
+
+	newType := disko.PartType(toGUID("1154cb47-1514-4efa-9e03-1aa360c3b455"))
+	// generate random to avoid cruft affecting repeated runs.
+	newGUID1 := disko.GenGUID()
+	update := disko.Partition{
+		Number: 1,
+		Type:   newType,
+		Name:   "new name",
+		ID:     newGUID1,
+	}
+
+	if lSys.UpdatePartitions(disk, disko.PartitionSet{1: update}); err != nil {
+		t.Fatalf("Failed to update partition: %v", err)
+	}
+
+	if err := partPathsExist(disk.Path, 1); err != nil {
+		t.Errorf("paths did not exist after UpdatePartitions: %v", err)
+	}
+
+	if err := pathExistsNoErr(path.Join("/dev/disk/by-partuuid", strings.ToLower(newGUID1.String()))); err != nil {
+		t.Errorf("by-partuuid did not exist: %v", err)
+	}
+
+	disk, err = lSys.ScanDisk(loopDev)
+	if err != nil {
+		t.Errorf("Failed to scan loopDev %s", loopDev)
+	}
+
+	expected := disko.Partition{
+		Number: 1,
+		Start:  part1.Start,
+		Last:   part1.Last,
+		Type:   update.Type,
+		Name:   update.Name,
+		ID:     update.ID,
+	}
+
+	ast.Equal(expected, disk.Partitions[1], "partition not updated as expected")
+}
+
+func TestRootPartitionDelete(t *testing.T) {
+	iSkipOrFail(t, isRoot, canUseLoop)
+	var loopDev string
+
+	var cl = cleanList{}
+	defer cl.Cleanup(t)
+
+	c, tmpFile := getTempFile(GiB)
+	cl.Add(c)
+
+	if cleanup, path, err := connectLoop(tmpFile); err != nil {
+		runLog("losetup", "-a")
+		t.Fatalf("failed loop: %s\n", err)
+	} else {
+		cl.AddF(cleanup, "detach loop "+tmpFile)
+		loopDev = path
+	}
+
+	lSys := linux.System()
+
+	disk, err := lSys.ScanDisk(loopDev)
+	if err != nil {
+		t.Fatalf("Failed first scan of %s: %s\n", loopDev, err)
+	}
+
+	p := linux.GetPartitionKname(disk.Path, 1)
+	guid1 := toGUID("a8be3d6b-d89c-4406-9d21-27a44e1bd41d")
+	byPartUUIDPath := path.Join("/dev/disk/by-partuuid", strings.ToLower(guid1.String()))
+	part1 := disko.Partition{
+		Start:  disk.FreeSpaces()[0].Start,
+		Last:   disk.FreeSpaces()[0].Last,
+		Type:   disko.PartType(partid.LinuxRootX86),
+		Name:   "test-root-delete",
+		Number: 1,
+		ID:     guid1,
+	}
+
+	if err = lSys.CreatePartitions(disk, disko.PartitionSet{1: part1}); err != nil {
+		t.Fatalf("failed create partitions %s", err)
+	}
+
+	if err := partPathsExist(disk.Path, 1); err != nil {
+		t.Errorf("paths did not exist after CreatePartitions: %v", err)
+	}
+
+	if err := pathExistsNoErr(byPartUUIDPath); err != nil {
+		t.Errorf("no by-partuuid: %v", err)
+	}
+
+	disk, err = lSys.ScanDisk(loopDev)
+	if err != nil {
+		t.Errorf("Failed to scan after create")
+	}
+
+	if err := lSys.DeletePartition(disk, 1); err != nil {
+		t.Errorf("Failed to delete partition: %v", err)
+	}
+
+	if err := pathExistsNoErr(p); err == nil {
+		t.Errorf("partition 1 path (%s) existed after deletion", p)
+	}
+
+	if err := pathExistsNoErr(byPartUUIDPath); err == nil {
+		t.Errorf("by-partuuid path existed after deletion: %v", byPartUUIDPath)
+	}
 }
 
 func TestRootLVMExtend(t *testing.T) {

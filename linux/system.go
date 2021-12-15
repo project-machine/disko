@@ -200,6 +200,22 @@ func (ls *linuxSystem) DeletePartition(d disko.Disk, number uint) error {
 	return udevSettle()
 }
 
+func (ls *linuxSystem) UpdatePartition(d disko.Disk, p disko.Partition) error {
+	if err := updatePartitions(d, disko.PartitionSet{p.Number: p}); err != nil {
+		return err
+	}
+
+	return udevSettle()
+}
+
+func (ls *linuxSystem) UpdatePartitions(d disko.Disk, pSet disko.PartitionSet) error {
+	if err := updatePartitions(d, pSet); err != nil {
+		return err
+	}
+
+	return udevSettle()
+}
+
 func (ls *linuxSystem) Wipe(d disko.Disk) error {
 	if err := wipeDisk(d); err != nil {
 		return err
