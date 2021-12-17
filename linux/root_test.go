@@ -1,3 +1,4 @@
+//go:build linux && !skipIntegration
 // +build linux,!skipIntegration
 
 // nolint:errcheck,funlen
