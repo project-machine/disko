@@ -5,13 +5,50 @@ linters-settings:
     lines: 80
     statements: 60
 
+linters:
+  # you can see what is disabled with: golangci-lint linters
+  enable:
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - exhaustive
+    - exportloopref
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
+    - wsl
+
 issues:
   exclude-rules:
     - linters: ["gocritic"]
       text: "ifElseChain:"
-    # 1 is not a magic number. 3 is a magic number.
-    - linters: ["gomnd"]
-      text: "Magic number: 1,"
-    # test files can have globals and magic numbers.
-    - linters: ["gochecknoglobals", "gomnd"]
+    # test files can have globals
+    - linters: ["gochecknoglobals"]
       path: _test.go

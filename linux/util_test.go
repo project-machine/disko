@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//nolint: lll
 func TestParseUdevInfo(t *testing.T) {
 	data := []byte(`P: /devices/virtual/block/dm-0
 N: dm-0

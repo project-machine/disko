@@ -5,6 +5,9 @@ LDFLAGS := "${ldflags:+$ldflags }-X main.version=${ver}${suff}"
 BUILD_FLAGS := -ldflags "-X main.version=$(VERSION_FULL)"
 ENV_ROOT := $(shell [ "$$(id -u)" = "0" ] && echo env || echo sudo )
 
+GOLANGCI_VER = v1.43.0
+GOLANGCI = ./tools/golangci-lint-$(GOLANGCI_VER)
+
 CMDS := demo/demo ptimg/ptimg
 
 GO_FILES := $(wildcard *.go)
@@ -32,10 +35,18 @@ gofmt: .gofmt
 	o=$$(gofmt -l -w .) && [ -z "$$o" ] || { echo "gofmt made changes: $$o"; exit 1; }
 	@touch $@
 
+
+golangci-lint: $(GOLANGCI)
+
+$(GOLANGCI):
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+		sh -s -- -b $(dir $@) $(GOLANGCI_VER) || { rm -f $(dir $@)/golangci-lint; exit 1; }
+	mv $(dir $@)/golangci-lint $@
+
 lint: .lint
 
-.lint: $(ALL_GO_FILES)
-	golangci-lint run --enable-all
+.lint: $(ALL_GO_FILES) $(GOLANGCI) .golangci.yml
+	$(GOLANGCI) run ./...
 	@touch $@
 
 test:
@@ -59,4 +70,4 @@ debug:
 clean:
 	rm -f $(CMDS) coverage*.txt coverage*.html .lint .build
 
-.PHONY: debug check test test-all gofmt clean all lint build
+.PHONY: debug check test test-all gofmt clean all lint build golangci-lint

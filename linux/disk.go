@@ -28,9 +28,8 @@ const (
 )
 
 // ErrNoPartitionTable is returned if there is no partition table.
-var ErrNoPartitionTable error = errors.New("no Partition Table Found")
+var ErrNoPartitionTable = errors.New("no Partition Table Found")
 
-// nolint: gochecknoglobals
 var xenbusSysPathMatch = regexp.MustCompile(`/devices/vbd-\d+/block/`)
 
 // toGPTPartition - convert the Partition type into a gpt.Partition
@@ -183,7 +182,7 @@ func readMBRTable(fp io.ReadSeeker) (disko.PartitionSet, error) {
 	return parts, nil
 }
 
-func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, disko.TableType, uint, error) { // nolint: unparam
+func findPartitions(fp io.ReadSeeker) (disko.PartitionSet, disko.TableType, uint, error) {
 	var err error
 	var ssize uint
 	var gptTable gpt.Table
@@ -271,7 +270,7 @@ func getSysPathForBlockDevicePath(dev string) (string, error) {
 	// Return the path in /sys/class/block/<device> for a given
 	// block device kname or path.
 	var syspath string
-	var sysdir string = "/sys/class/block"
+	var sysdir = "/sys/class/block"
 
 	if strings.Contains(dev, "/") {
 		// after symlink resolution, devpath = '/dev/sda' or '/dev/sdb1'

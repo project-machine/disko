@@ -1,4 +1,3 @@
-// nolint:errcheck
 package linux_test
 
 import (
@@ -179,6 +178,8 @@ func getTempFile(size int64) (cleaner, string) {
 	return cleaner{func() error { return os.Remove(name) }, "remove tempFile " + name}, name
 }
 
+// we don't need crypto/math random numbers to construct a random string
+//nolint:gosec
 func randStr(n int) string {
 	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 

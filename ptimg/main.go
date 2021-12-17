@@ -31,6 +31,7 @@ first-lba: 2048
 
 1 : start=2048, size=1048576
 `
+const DefaultErrorCode = 127
 
 func getCommandErrorRCDefault(err error, rcError int) int {
 	if err == nil {
@@ -48,7 +49,7 @@ func getCommandErrorRCDefault(err error, rcError int) int {
 }
 
 func getCommandErrorRC(err error) int {
-	return getCommandErrorRCDefault(err, 127)
+	return getCommandErrorRCDefault(err, DefaultErrorCode)
 }
 
 func cmdError(args []string, out []byte, err []byte, rc int) error {
@@ -243,7 +244,7 @@ func connectDevice(fname string, imgFormat string) (func() error, string, error)
 	var cleanup = func() error { return nil }
 	var devPath string
 	var err error
-	var forceNBD bool = false
+	var forceNBD bool
 
 	val := os.Getenv("FORCE_NBD")
 	if val != "" {
@@ -459,7 +460,6 @@ func createOrFindPartition(dSys disko.System, devPath string, ptname string, max
 	return ptNum, err
 }
 
-//nolint: funlen
 func handleMount(cpSrc string, exCmd []string, devPath string, subs map[string]string) error {
 	var tempDir, mountPoint string
 	var err error
