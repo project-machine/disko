@@ -240,8 +240,6 @@ type Property string
 const (
 	// Ephemeral - A cloud ephemeral disk.
 	Ephemeral Property = "EPHEMERAL"
-	// ReadOnly  - A disk that cannot be modified, writes fail
-	ReadOnly Property = "READ-ONLY"
 )
 
 // PropertySet - a group of properties of a disk
@@ -323,6 +321,9 @@ type Disk struct {
 	// SectorSize is the sector size of the device, if its unknown or not
 	// applicable it will return 0.
 	SectorSize uint `json:"sectorSize"`
+
+	// ReadOnly - cannot be written to.
+	ReadOnly bool `json:"read-only"`
 
 	// Type is the DiskType indicating the type of this disk. This value
 	// can be used to determine if the disk is of a particular media type like

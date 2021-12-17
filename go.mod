@@ -3,7 +3,6 @@ module github.com/anuvu/disko
 go 1.13
 
 require (
-	github.com/Jeffail/gabs v1.4.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc

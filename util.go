@@ -2,7 +2,6 @@ package disko
 
 import (
 	"fmt"
-	"os"
 	"sort"
 )
 
@@ -61,12 +60,4 @@ func findRangeGaps(ranges uRanges, min, max uint64) uRanges {
 	}
 
 	return ret
-}
-
-func PathExists(d string) bool {
-	_, err := os.Stat(d)
-	if err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
 }

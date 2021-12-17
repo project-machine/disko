@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 	"syscall"
 
 	"github.com/anuvu/disko"
@@ -83,23 +84,28 @@ func (ls *linuxSystem) ScanDisks(filter disko.DiskFilter,
 	return disks, nil
 }
 
-func getDiskReadOnlyProperty(d disko.UdevInfo) (bool, error) {
-	syspath, err := getSysPathForBlockDevicePath(d.Name)
+func getDiskReadOnly(kname string) (bool, error) {
+	syspath, err := getSysPathForBlockDevicePath(kname)
 	if err != nil {
 		return false, err
 	}
 
 	syspathReadOnly := syspath + "/ro"
-	if disko.PathExists(syspathReadOnly) {
-		content, err := ioutil.ReadFile(syspathReadOnly)
-		if err != nil {
-			return false, fmt.Errorf("failed to read %s for %s", syspathReadOnly, d.Name)
-		}
-		if string(content) == "1\n" {
-			return true, nil
-		}
+	content, err := ioutil.ReadFile(syspathReadOnly)
+
+	if err != nil {
+		return false, err
 	}
-	return false, nil
+
+	val := strings.TrimRight(string(content), "\n")
+
+	if val == "1" {
+		return true, nil
+	} else if val == "0" {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("unexpected value '%s' found in %s", syspathReadOnly, val)
 }
 
 func getDiskProperties(d disko.UdevInfo) disko.PropertySet {
@@ -113,15 +119,10 @@ func getDiskProperties(d disko.UdevInfo) disko.PropertySet {
 		props[disko.Ephemeral] = true
 	}
 
-	readOnly, err := getDiskReadOnlyProperty(d)
-	// only mark read-only prop if set
-	if err == nil && readOnly {
-		props[disko.ReadOnly] = readOnly
-	}
-
 	return props
 }
 
+// nolint: funlen
 func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 	var err error
 	var blockdev = true
@@ -166,6 +167,13 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		Attachment: attachType,
 		Properties: properties,
 	}
+
+	ro, err := getDiskReadOnly(disk.Name)
+	if err != nil {
+		return disk, err
+	}
+
+	disk.ReadOnly = ro
 
 	fh, err := os.Open(devicePath)
 	if err != nil {
