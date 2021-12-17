@@ -19,6 +19,7 @@ linters:
     - exhaustive
     - exportloopref
     - funlen
+    - gochecknoglobals
     - gochecknoinits
     - goconst
     - gocritic
@@ -46,29 +47,10 @@ linters:
     - whitespace
     - wsl
 
-  # don't enable:
-  # - asciicheck
-  # - gochecknoglobals
-  # - gocognit
-  # - godot
-  # - godox
-  # - goerr113
-  # - gomnd
-  # - maligned
-  # - nestif
-  # - prealloc
-  # - testpackage
-  # - wsl
-  # - goimports
-
-# golangci.com configuration
-# https://github.com/golangci/golangci/wiki/Configuration
-service:
-  golangci-lint-version: 1.30.x # use the fixed version to not introduce new linters unexpectedly
-  prepare:
-    - echo "I wish I could be prepared. But, nothing to do here for the moment"
-
 issues:
   exclude-rules:
     - linters: ["gocritic"]
       text: "ifElseChain:"
+    # test files can have globals
+    - linters: ["gochecknoglobals"]
+      path: _test.go

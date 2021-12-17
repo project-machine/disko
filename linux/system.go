@@ -27,7 +27,6 @@ func System() disko.System {
 // matching intent of /lib/udev/rules.d/66-azure-ephemeral.rules
 // /devices/LNXSYSTM:00/LNXSYBUS:00/PNP0A03:00/device:07/VMBUS:01/00000000-0001-8899-0000-000000000000/
 //      host1/target1:0:1/1:0:1:0/block/sdb
-// nolint: gochecknoglobals
 var vmbusSyspathEphemeral = regexp.MustCompile(`.*/VMBUS:\d\d/00000000-0001-\d{4}-\d{4}-\d{12}/host.*`)
 
 func (ls *linuxSystem) ScanAllDisks(filter disko.DiskFilter) (disko.DiskSet, error) {

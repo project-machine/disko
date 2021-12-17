@@ -30,7 +30,6 @@ const (
 // ErrNoPartitionTable is returned if there is no partition table.
 var ErrNoPartitionTable = errors.New("no Partition Table Found")
 
-// nolint: gochecknoglobals
 var xenbusSysPathMatch = regexp.MustCompile(`/devices/vbd-\d+/block/`)
 
 // toGPTPartition - convert the Partition type into a gpt.Partition
