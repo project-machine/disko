@@ -34,7 +34,6 @@ linters:
     - nakedret
     - noctx
     - nolintlint
-    - revive
     - rowserrcheck
     - staticcheck
     - structcheck
