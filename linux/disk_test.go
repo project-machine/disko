@@ -487,3 +487,45 @@ func TestBadPartition(t *testing.T) {
 		t.Errorf("Created partition with OOB end (%d). should have failed", part.Last)
 	}
 }
+
+func TestEmptyPartIDIsFilled(t *testing.T) {
+	empty := disko.GUID{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+	}
+	before := disko.Partition{
+		Start:  4 * 1024 * 1024,
+		Last:   8*1024*1024 - 1,
+		Type:   partid.LinuxLVM,
+		ID:     empty,
+		Number: uint(1),
+	}
+
+	after := toGPTPartition(before, sectorSize512)
+	if before.ID == disko.GUID(after.Id) {
+		t.Errorf("Empty ID did not get filled in toGPTPartition.")
+	}
+
+	after2 := toGPTPartition(before, sectorSize512)
+	if after2.Id == after.Id {
+		t.Errorf("toGPTPartition returned 2 identical ID GUIDs: %s.", after.Id)
+	}
+}
+
+func TestNoEmptyPartID(t *testing.T) {
+	myID := disko.GUID{
+		0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
+		0x9, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
+	}
+	before := disko.Partition{
+		Start:  4 * 1024 * 1024,
+		Last:   8*1024*1024 - 1,
+		Type:   partid.LinuxLVM,
+		ID:     myID,
+		Number: uint(1),
+	}
+
+	after := toGPTPartition(before, sectorSize512)
+	if before.ID != disko.GUID(after.Id) {
+		t.Errorf("toGPTPartition changed partition ID: %s -> %s", before.ID, after.Id)
+	}
+}

@@ -35,6 +35,11 @@ var xenbusSysPathMatch = regexp.MustCompile(`/devices/vbd-\d+/block/`)
 
 // toGPTPartition - convert the Partition type into a gpt.Partition
 func toGPTPartition(p disko.Partition, sectorSize uint) gpt.Partition {
+	empty := disko.GUID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+	if p.ID == empty {
+		p.ID = disko.GenGUID()
+	}
+
 	return gpt.Partition{
 		Type:          gpt.PartType(p.Type),
 		Id:            gpt.Guid(p.ID),
