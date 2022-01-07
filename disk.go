@@ -542,6 +542,16 @@ func (p PartType) String() string {
 	return GUIDToString(GUID(p))
 }
 
+// StringToPartType - convert a string to a partition type.
+func StringToPartType(s string) (PartType, error) {
+	p, err := StringToGUID(s)
+	if err != nil {
+		return PartType{}, err
+	}
+
+	return PartType(p), nil
+}
+
 // FreeSpace indicates a free slot on the disk with a Start and Last offset,
 // where a partition can be created.
 type FreeSpace struct {

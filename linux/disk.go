@@ -32,10 +32,12 @@ var ErrNoPartitionTable = errors.New("no Partition Table Found")
 
 var xenbusSysPathMatch = regexp.MustCompile(`/devices/vbd-\d+/block/`)
 
+// nolint: gochecknoglobals
+var emptyGUID = disko.GUID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+
 // toGPTPartition - convert the Partition type into a gpt.Partition
 func toGPTPartition(p disko.Partition, sectorSize uint) gpt.Partition {
-	empty := disko.GUID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
-	if p.ID == empty {
+	if p.ID == emptyGUID {
 		p.ID = disko.GenGUID()
 	}
 
@@ -47,6 +49,19 @@ func toGPTPartition(p disko.Partition, sectorSize uint) gpt.Partition {
 		Flags:         gpt.Flags{},
 		PartNameUTF16: getPartName(p.Name),
 		TrailingBytes: []byte{},
+	}
+}
+
+// gptToDiskoPartition - convert the gpt.Partition type to a disko.Partition
+func gptToDiskoPartition(p gpt.Partition, num uint, sectorSize uint) disko.Partition {
+	// this is lossy on TrailingBytes  and Flags :-(
+	return disko.Partition{
+		Start:  p.FirstLBA * uint64(sectorSize),
+		Last:   p.LastLBA*uint64(sectorSize) + uint64(sectorSize-1),
+		ID:     disko.GUID(p.Id),
+		Type:   disko.PartType(p.Type),
+		Name:   p.Name(),
+		Number: num,
 	}
 }
 
@@ -449,6 +464,80 @@ func addPartitionSetMBR(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 	return nil
 }
 
+func updatePartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.PartitionSet) error {
+	gptTable, _, err := readGPTTableSearch(fp, []uint{d.SectorSize})
+	if err != nil {
+		return err
+	}
+
+	newParts := disko.PartitionSet{}
+
+	for n, p := range pSet {
+		gPart := gptTable.Partitions[n-1]
+		if gPart.IsEmpty() {
+			return fmt.Errorf("cannot update disk %s.Path partition %d: partition does not exist",
+				d.Path, p.Number)
+		}
+
+		newPt := gptToDiskoPartition(gPart, n, d.SectorSize)
+
+		// Only the GUID, Type and Name get updated.
+		if newPt.ID != emptyGUID {
+			newPt.ID = p.ID
+		}
+
+		if newPt.Type != partid.Empty {
+			newPt.Type = p.Type
+		}
+
+		if p.Name != "" {
+			newPt.Name = p.Name
+		}
+
+		newParts[n] = newPt
+		gptTable.Partitions[n-1] = toGPTPartition(newPt, d.SectorSize)
+	}
+
+	if _, err := writeGPTTable(fp, gptTable, d.Size); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updatePartitionSetMBR(_ *os.File, d disko.Disk, pSet disko.PartitionSet) error {
+	return fmt.Errorf("MBR partition update is not implemented. Cannot update %d partitions on %s",
+		len(pSet), d.Path)
+}
+
+// nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
+func updatePartitions(d disko.Disk, pSet disko.PartitionSet) error {
+	err := withLockedFile(d.Path,
+		func(fp *os.File, fInfo os.FileInfo) error {
+			if d.Table == disko.MBR {
+				return updatePartitionSetMBR(fp, d, pSet)
+			} else if d.Table == disko.GPT {
+				return updatePartitionSetGPT(fp, d, pSet)
+			} else if d.Table == disko.TableNone {
+				return fmt.Errorf("cannot update partitions on disk %s: it has no partition table",
+					d.Name)
+			}
+			return fmt.Errorf(
+				"cannot update partitions on disk %s: partition table '%s' is not supported",
+				d.Name, d.Table)
+		})
+
+	if err != nil {
+		return err
+	}
+
+	if err := udevSettle(); err != nil {
+		return err
+	}
+
+	return genPartChangeUEvent(d, pSet)
+}
+
 func rangeCheckParts(d disko.Disk, pSet disko.PartitionSet) error {
 	maxSize := d.Size
 
@@ -527,6 +616,7 @@ func addPartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 
 // addPartitionSet - open the disk, add partitions.
 //     Caller's responsibility to udevSettle
+// nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
 func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 	if d.Table != disko.MBR && d.Table != disko.GPT && d.Table != disko.TableNone {
 		return fmt.Errorf("cannot add partition disk %s with table type %s", d.Name, d.Table)
@@ -536,65 +626,36 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 		return err
 	}
 
-	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
-	defer fp.Close()
-
-	if err := syscall.Flock(int(fp.Fd()), unix.LOCK_EX); err != nil {
-		return fmt.Errorf("failed to lock %s: %s", d.Path, err)
-	}
-
-	if d.Table == disko.MBR {
-		err = addPartitionSetMBR(fp, d, pSet)
-	} else {
-		err = addPartitionSetGPT(fp, d, pSet)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if err := fp.Sync(); err != nil {
-		return err
-	}
-
-	info, err := fp.Stat()
-	if err != nil {
-		return fmt.Errorf("failed to stat %s: %s", d.Path, err)
-	}
-
-	// Call addpart if this is a block device.
-	if info.Mode()&os.ModeDevice != 0 {
-		// Close the filehandle and release the lock, then call udevSettle
-		// so that we can call addpart if needed.
-		fp.Close()
-
-		if err := udevSettle(); err != nil {
-			return err
-		}
-
-		for _, p := range pSet {
-			ppath := getPartPathForKname(d.Name, p.Number)
-			if exists, err := blockDeviceExists(ppath); err != nil {
-				return fmt.Errorf("failed to stat %s part %d (%s): %s",
-					d.Name, p.Number, getPartPathForKname(d.Name, p.Number), err)
-			} else if exists {
-				continue
-			}
-
-			// for the addpart interface to the kernel, units are always 512.
-			if err := runCommand("addpart", d.Path,
-				fmt.Sprintf("%d", p.Number),
-				fmt.Sprintf("%d", p.Start/sectorSize512),
-				fmt.Sprintf("%d", p.Size()/sectorSize512)); err != nil {
+	// Add the devices and call kernelAddParts with a lock.  After doing so, the kernel
+	// should know about the devices, but udev will not have processed any events
+	// because of the lock.  After lock is given up, generate Change events.
+	err := withLockedFile(d.Path, func(fp *os.File, fInfo os.FileInfo) error {
+		if d.Table == disko.MBR {
+			if err := addPartitionSetMBR(fp, d, pSet); err != nil {
 				return err
 			}
+		} else {
+			if err := addPartitionSetGPT(fp, d, pSet); err != nil {
+				return nil
+			}
 		}
+
+		if fInfo.Mode()&os.ModeDevice == 0 {
+			return nil
+		}
+
+		return kernelAddParts(d, pSet)
+	})
+
+	if err != nil {
+		return err
 	}
 
-	return nil
+	if err := udevSettle(); err != nil {
+		return err
+	}
+
+	return genPartChangeUEvent(d, pSet)
 }
 
 func deletePartitionSetMBR(fp io.ReadWriteSeeker, pNums []uint) error {
@@ -637,7 +698,7 @@ func deletePartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pNums []uint) er
 		disko.Partition{
 			Start: 0,
 			Last:  0,
-			ID:    disko.GUID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+			ID:    emptyGUID,
 			Type:  partid.Empty,
 		}, d.SectorSize)
 
@@ -652,28 +713,24 @@ func deletePartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pNums []uint) er
 	return nil
 }
 
-func deletePartitions(d disko.Disk, pNums []uint) error {
-	if d.Table == disko.MBR {
-		return fmt.Errorf("unsupported: cannot remove partition to disk with MBR table")
-	}
-
-	fp, err := os.OpenFile(d.Path, os.O_RDWR, 0)
+// nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
+func withLockedFile(path string, cb func(*os.File, os.FileInfo) error) error {
+	fp, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
 		return err
 	}
 	defer fp.Close()
 
 	if err := syscall.Flock(int(fp.Fd()), unix.LOCK_EX); err != nil {
-		return fmt.Errorf("failed to lock %s: %s", d.Path, err)
+		return fmt.Errorf("failed to lock %s: %s", path, err)
 	}
 
-	if d.Table == disko.MBR {
-		err = deletePartitionSetMBR(fp, pNums)
-	} else {
-		err = deletePartitionSetGPT(fp, d, pNums)
-	}
-
+	info, err := fp.Stat()
 	if err != nil {
+		return fmt.Errorf("failed to stat %s: %s", path, err)
+	}
+
+	if err := cb(fp, info); err != nil {
 		return err
 	}
 
@@ -681,29 +738,80 @@ func deletePartitions(d disko.Disk, pNums []uint) error {
 		return err
 	}
 
-	info, err := fp.Stat()
-	if err != nil {
-		return fmt.Errorf("failed to stat %s: %s", d.Path, err)
-	}
+	return nil
+}
 
-	// Call delpart only if this is a block device.
-	if info.Mode()&os.ModeDevice != 0 {
-		for _, pNum := range pNums {
-			partPath := getPartPathForKname(d.Name, pNum)
+// kernelDelParts - ask the kernel to remove a partition, and then remove it from /dev.
+//  this can be executed with a lock.  successful 'delpart /dev/disk 3' will remove all
+//  symlinks in /dev/ to /dev/disk3 even if disk is locked.
+func kernelDelParts(d disko.Disk, pNums []uint) error {
+	for _, pNum := range pNums {
+		bPath := fmt.Sprintf("/sys/class/block/%s", GetPartitionKname(d.Name, pNum))
 
-			if exists, err := blockDeviceExists(partPath); err != nil {
-				return fmt.Errorf("failed to stat %s part %d (%s): %s", d.Name, pNum, partPath, err)
-			} else if !exists {
-				continue
-			}
+		// If the kernel does not know about this device, then 'delpart' will fail.
+		// ignore other errors for now.
+		if _, err := os.Stat(bPath); err != nil && os.IsNotExist(err) {
+			continue
+		}
 
-			if err = runCommand("delpart", d.Path, fmt.Sprintf("%d", pNum)); err != nil {
-				return err
-			}
+		if err := runCommand("delpart", d.Path, fmt.Sprintf("%d", pNum)); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func kernelAddParts(d disko.Disk, pSet disko.PartitionSet) error {
+	for _, p := range pSet {
+		if err := runCommand("addpart", d.Path,
+			fmt.Sprintf("%d", p.Number),
+			fmt.Sprintf("%d", p.Start/sectorSize512),
+			fmt.Sprintf("%d", p.Size()/sectorSize512)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func genPartChangeUEvent(d disko.Disk, pSet disko.PartitionSet) error {
+	if isBlk, err := blockDeviceExists(d.Path); err != nil {
+		return err
+	} else if !isBlk {
+		return nil
+	}
+
+	for _, p := range pSet {
+		uePath := fmt.Sprintf("/sys/class/block/%s/uevent", GetPartitionKname(d.Name, p.Number))
+		if err := ioutil.WriteFile(uePath, []byte("change"), 0600); err != nil && os.IsNotExist(err) {
+			return fmt.Errorf("%s did not exist: %v", uePath, err)
+		} else if err != nil {
+			return fmt.Errorf("failed to write 'change' to %s: %v", uePath, err)
+		}
+	}
+
+	return nil
+}
+
+// nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
+func deletePartitions(d disko.Disk, pNums []uint) error {
+	return withLockedFile(d.Path, func(fp *os.File, fInfo os.FileInfo) error {
+		if d.Table == disko.MBR {
+			if err := deletePartitionSetMBR(fp, pNums); err != nil {
+				return err
+			}
+		} else {
+			if err := deletePartitionSetGPT(fp, d, pNums); err != nil {
+				return err
+			}
+		}
+		if fInfo.Mode()&os.ModeDevice == 0 {
+			return nil
+		}
+
+		return kernelDelParts(d, pNums)
+	})
 }
 
 func blockDeviceExists(bpath string) (bool, error) {
@@ -720,7 +828,8 @@ func blockDeviceExists(bpath string) (bool, error) {
 	return info.Mode()&os.ModeDevice != 0, nil
 }
 
-func getPartKname(diskName string, num uint) string {
+// GetPartitionKname - get the name of the num partition device on diskName
+func GetPartitionKname(diskName string, num uint) string {
 	endsWithNum := regexp.MustCompile("[0-9]$")
 	sep := ""
 
@@ -729,10 +838,6 @@ func getPartKname(diskName string, num uint) string {
 	}
 
 	return fmt.Sprintf("%s%s%d", diskName, sep, num)
-}
-
-func getPartPathForKname(diskName string, num uint) string {
-	return getPathForKname(getPartKname(diskName, num))
 }
 
 // writeProtectiveMBR - add a ProtectiveMBR spanning the disk.
