@@ -104,17 +104,25 @@ func getDiskSet(mysys disko.System, paths ...string) (disko.DiskSet, error) {
 		return true
 	}
 
+	return getDiskSetFilter(mysys, matchAll, paths...)
+}
+
+func getDiskSetFilter(mysys disko.System, matcher disko.DiskFilter, paths ...string) (disko.DiskSet, error) {
 	if len(paths) == 0 || (len(paths) == 1 && paths[0] == "all") {
-		return mysys.ScanAllDisks(matchAll)
+		return mysys.ScanAllDisks(matcher)
 	}
 
-	return mysys.ScanDisks(matchAll, paths...)
+	return mysys.ScanDisks(matcher, paths...)
 }
 
 func diskWipe(c *cli.Context) error {
 	mysys := linux.System()
 
-	disks, err := getDiskSet(mysys, c.Args().Slice()...)
+	// only match read-write disks here.
+	disks, err := getDiskSetFilter(
+		mysys,
+		func(d disko.Disk) bool { return !d.ReadOnly },
+		c.Args().Slice()...)
 
 	if err != nil {
 		return err
