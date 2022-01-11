@@ -108,7 +108,7 @@ const (
 
 func (t AttachmentType) String() string {
 	return []string{"UNKNOWN", "RAID", "SCSI", "ATA", "PCIE", "USB",
-		"VIRTIO", "IDE", "NBD", "LOOP"}[t]
+		"VIRTIO", "IDE", "NBD", "LOOP", "XENBUS"}[t]
 }
 
 // StringToAttachmentType - Convert a string to an AttachmentType
@@ -123,6 +123,7 @@ func StringToAttachmentType(atypeStr string) AttachmentType {
 		"IDE":     IDE,
 		"NBD":     NBD,
 		"LOOP":    LOOP,
+		"XENBUS":  XENBUS,
 	}
 
 	if atype, ok := kmap[atypeStr]; ok {
@@ -396,10 +397,10 @@ func (d Disk) String() string {
 
 	return fmt.Sprintf(
 		("%s (%s) Table=%s Size=%s NumParts=%d FreeSpace=%s/%d SectorSize=%d Attachment=%s Type=%s" +
-			" Props=%s"),
+			" ReadOnly=%t Props=%s"),
 		d.Name, d.Path, d.Table, mbsize(d.Size), len(d.Partitions),
 		mbsize(avail), len(fs), d.SectorSize,
-		d.Attachment, d.Type, d.Properties.String())
+		d.Attachment, d.Type, d.ReadOnly, d.Properties.String())
 }
 
 // Details returns the disk details as a table formatted string.
