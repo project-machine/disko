@@ -108,7 +108,7 @@ const (
 
 func (t AttachmentType) String() string {
 	return []string{"UNKNOWN", "RAID", "SCSI", "ATA", "PCIE", "USB",
-		"VIRTIO", "IDE", "NBD", "LOOP"}[t]
+		"VIRTIO", "IDE", "NBD", "LOOP", "XENBUS"}[t]
 }
 
 // StringToAttachmentType - Convert a string to an AttachmentType
@@ -123,6 +123,7 @@ func StringToAttachmentType(atypeStr string) AttachmentType {
 		"IDE":     IDE,
 		"NBD":     NBD,
 		"LOOP":    LOOP,
+		"XENBUS":  XENBUS,
 	}
 
 	if atype, ok := kmap[atypeStr]; ok {
