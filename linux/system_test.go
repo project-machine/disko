@@ -160,4 +160,13 @@ func TestCreatePartitions(t *testing.T) {
 
 	ast.Equal(part1, pSetFound[1])
 	ast.Equal(part2, pSetFound[2])
+
+	scannedDisk, err := sys.ScanDisk(disk.Path)
+	if err != nil {
+		t.Errorf("Failed to scan disk-image")
+	}
+
+	ast.Equal(disk.Size, scannedDisk.Size)
+	ast.Equal(disko.FILESYSTEM, scannedDisk.Attachment)
+	ast.Equal(disko.TYPEFILE, scannedDisk.Type)
 }

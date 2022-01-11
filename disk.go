@@ -19,10 +19,13 @@ const (
 
 	// NVME - Non-volatile memory express
 	NVME
+
+	// TYPEFILE - A file on disk, not a block device.
+	TYPEFILE
 )
 
 func (t DiskType) String() string {
-	return []string{"HDD", "SSD", "NVME"}[t]
+	return []string{"HDD", "SSD", "NVME", "FILE"}[t]
 }
 
 // StringToDiskType - convert a string to a disk type.
@@ -31,6 +34,7 @@ func StringToDiskType(typeStr string) DiskType {
 		"HDD":  HDD,
 		"SSD":  SSD,
 		"NVME": NVME,
+		"FILE": TYPEFILE,
 	}
 	if dtype, ok := kmap[typeStr]; ok {
 		return dtype
@@ -104,26 +108,30 @@ const (
 
 	// XENBUS - xen blkfront
 	XENBUS
+
+	// FILESYSTEM - a file on a filesystem.
+	FILESYSTEM
 )
 
 func (t AttachmentType) String() string {
 	return []string{"UNKNOWN", "RAID", "SCSI", "ATA", "PCIE", "USB",
-		"VIRTIO", "IDE", "NBD", "LOOP", "XENBUS"}[t]
+		"VIRTIO", "IDE", "NBD", "LOOP", "XENBUS", "FILESYSTEM"}[t]
 }
 
 // StringToAttachmentType - Convert a string to an AttachmentType
 func StringToAttachmentType(atypeStr string) AttachmentType {
 	kmap := map[string]AttachmentType{
-		"UNKNOWN": UnknownAttach,
-		"RAID":    RAID,
-		"SCSI":    SCSI,
-		"ATA":     ATA,
-		"PCIE":    PCIE,
-		"VIRTIO":  VIRTIO,
-		"IDE":     IDE,
-		"NBD":     NBD,
-		"LOOP":    LOOP,
-		"XENBUS":  XENBUS,
+		"UNKNOWN":    UnknownAttach,
+		"RAID":       RAID,
+		"SCSI":       SCSI,
+		"ATA":        ATA,
+		"PCIE":       PCIE,
+		"VIRTIO":     VIRTIO,
+		"IDE":        IDE,
+		"NBD":        NBD,
+		"LOOP":       LOOP,
+		"XENBUS":     XENBUS,
+		"FILESYSTEM": FILESYSTEM,
 	}
 
 	if atype, ok := kmap[atypeStr]; ok {
