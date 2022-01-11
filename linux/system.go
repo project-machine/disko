@@ -134,9 +134,9 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		name = path.Base(devicePath)
 		blockdev = false
 	} else {
-		bss, err := getBlockSize(devicePath)
+		bss, err := getBlockSize(name)
 		if err != nil {
-			return disko.Disk{}, nil
+			return disko.Disk{}, err
 		}
 		ssize = uint(bss)
 	}
