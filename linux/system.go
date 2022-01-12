@@ -12,6 +12,7 @@ import (
 
 	"github.com/anuvu/disko"
 	"github.com/anuvu/disko/megaraid"
+	"golang.org/x/sys/unix"
 )
 
 type linuxSystem struct {
@@ -127,6 +128,9 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 	var err error
 	var blockdev = true
 	var ssize uint = sectorSize512
+	var diskType disko.DiskType
+	var attachType disko.AttachmentType
+	var ro bool
 
 	name, err := getKnameForBlockDevicePath(devicePath)
 
@@ -141,19 +145,39 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		ssize = uint(bss)
 	}
 
-	udInfo, err := GetUdevInfo(name)
-	if err != nil {
-		return disko.Disk{}, err
-	}
+	udInfo := disko.UdevInfo{}
 
-	diskType, err := ls.getDiskType(devicePath, udInfo)
-	if err != nil {
-		return disko.Disk{}, err
-	}
+	if blockdev {
+		udInfo, err = GetUdevInfo(name)
+		if err != nil {
+			return disko.Disk{}, err
+		}
 
-	attachType := getAttachType(udInfo)
-	if megaraid.IsMegaRaidSysPath(udInfo.Properties["DEVPATH"]) {
-		attachType = disko.RAID
+		diskType, err = ls.getDiskType(devicePath, udInfo)
+		if err != nil {
+			return disko.Disk{}, err
+		}
+
+		attachType = getAttachType(udInfo)
+
+		if megaraid.IsMegaRaidSysPath(udInfo.Properties["DEVPATH"]) {
+			attachType = disko.RAID
+		}
+
+		ro, err = getDiskReadOnly(name)
+		if err != nil {
+			return disko.Disk{}, err
+		}
+	} else {
+		diskType = disko.TYPEFILE
+		attachType = disko.FILESYSTEM
+
+		ro = false
+		if err := unix.Access(devicePath, unix.W_OK); err == unix.EACCES {
+			ro = true
+		} else if err != nil {
+			return disko.Disk{}, err
+		}
 	}
 
 	properties := getDiskProperties(udInfo)
@@ -162,18 +186,12 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 		Name:       name,
 		Path:       devicePath,
 		SectorSize: ssize,
+		ReadOnly:   ro,
 		UdevInfo:   udInfo,
 		Type:       diskType,
 		Attachment: attachType,
 		Properties: properties,
 	}
-
-	ro, err := getDiskReadOnly(disk.Name)
-	if err != nil {
-		return disk, err
-	}
-
-	disk.ReadOnly = ro
 
 	fh, err := os.Open(devicePath)
 	if err != nil {
