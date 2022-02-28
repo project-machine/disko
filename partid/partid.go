@@ -61,23 +61,23 @@ var (
 
 // Text gives human readable names
 var Text = map[[16]byte]string{ // nolint:gochecknoglobals
-	EFI:             "EFI System Partition",
+	EFI:             "EFI",
 	LUKS:            "LUKS",
-	LinuxFS:         "Linux",
+	LinuxFS:         "Linux-FS",
 	LinuxRAID:       "RAID",
-	LinuxRootX86:    "Linux root (ia32)",
-	LinuxRootArm32:  "Linux root (arm32)",
-	LinuxRootX86_64: "Linux root (x86_64)",
-	LinuxRootArm64:  "Linux root (arm64)",
-	LinuxDMCrypt:    "dm-crypt",
-	LinuxReserved:   "Linux Reserved",
+	LinuxRootX86:    "Linux-root-x86",
+	LinuxRootArm32:  "Linux-root-arm32",
+	LinuxRootX86_64: "Linux-root-x86_64",
+	LinuxRootArm64:  "Linux-root-arm64",
+	LinuxDMCrypt:    "DM-crypt",
+	LinuxReserved:   "Linux-Reserved",
 	LinuxLVM:        "LVM",
-	LinuxBoot:       "Linux /boot",
-	LinuxSwap:       "Linux swap",
-	LinuxHome:       "Linux /home",
-	LinuxSrv:        "Linux /srv",
+	LinuxBoot:       "Linux-/boot",
+	LinuxSwap:       "Linux-swap",
+	LinuxHome:       "Linux-/home",
+	LinuxSrv:        "Linux-/srv",
 	MBR:             "MBR",
-	BiosBoot:        "Bios Boot Partition",
+	BiosBoot:        "Bios-Boot",
 }
 
 // nolint: gochecknoglobals,gomnd
