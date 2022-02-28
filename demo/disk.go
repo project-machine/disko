@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/anuvu/disko"
 	"github.com/anuvu/disko/linux"
@@ -92,7 +93,15 @@ func diskShow(c *cli.Context) error {
 		return err
 	}
 
+	oDisks := []string{}
 	for _, d := range disks {
+		oDisks = append(oDisks, d.Name)
+	}
+
+	sort.Strings(oDisks)
+
+	for _, n := range oDisks {
+		d := disks[n]
 		fmt.Printf("%s\n%s\n", d.String(), d.Details())
 	}
 
