@@ -79,6 +79,12 @@ func TestDiskString(t *testing.T) {
 
 func TestDiskDetails(t *testing.T) {
 	mib := disko.Mebibyte
+
+	myType, err := disko.StringToGUID("9eb08654-de0e-4a63-967f-67a81d2ec0f0")
+	if err != nil {
+		t.Error(err)
+	}
+
 	d := disko.Disk{
 		Name:       "sde",
 		Path:       "/dev/sde",
@@ -87,14 +93,19 @@ func TestDiskDetails(t *testing.T) {
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 		Partitions: disko.PartitionSet{
-			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1},
+			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1,
+				Name: "my-name", Type: partid.LinuxLVM},
+			2: {Start: 253 * mib, Last: 400*mib - 1, Number: 2,
+				Type: disko.PartType(myType)},
 		},
 		UdevInfo: disko.UdevInfo{},
 	}
 	expected := `
-[ # Start Last Size Name ]
-[ 1 3 MiB 253 MiB 250 MiB                 ]
-[ - 253 MiB 1048575 MiB 1048322 MiB <free> ]`
+[ # Start Last Size Name Type ]
+[ 1 3 MiB 253 MiB 250 MiB my-name LVM                ]
+[ 2 253 MiB 400 MiB 147 MiB N/A 9EB08654-DE0E-4A63-967F-67A81D2EC0F0 ]
+[ - 400 MiB 1048575 MiB 1048175 MiB <free> N/A ]
+`
 
 	spaces := regexp.MustCompile("[ ]+")
 	found := strings.TrimSpace(spaces.ReplaceAllString(d.Details(), " "))

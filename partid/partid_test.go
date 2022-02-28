@@ -9,7 +9,7 @@ import (
 func TestPartID(t *testing.T) {
 	// Not a very good test, but something.
 	for id, text := range map[[16]byte]string{
-		partid.LinuxFS:   "Linux",
+		partid.LinuxFS:   "Linux-FS",
 		partid.LinuxLVM:  "LVM",
 		partid.LinuxRAID: "RAID",
 	} {
