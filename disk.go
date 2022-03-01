@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/anuvu/disko/partid"
 )
 
 // DiskType enumerates supported disk types.
@@ -426,8 +428,8 @@ func (d Disk) Details() string {
 
 	mbo := func(n uint64) string { return mbsize(n, 0) }
 	mbe := func(n uint64) string { return mbsize(n, 1) }
-	lfmt := "[%2s  %10s %10s %10s %-16s]\n"
-	buf := fmt.Sprintf(lfmt, "#", "Start", "Last", "Size", "Name")
+	lfmt := "[%2s  %10s %10s %10s %-16s %-18s ]\n"
+	buf := fmt.Sprintf(lfmt, "#", "Start", "Last", "Size", "Name", "Type")
 
 	pNums := make([]uint, 0, len(d.Partitions))
 	for n := range d.Partitions {
@@ -440,19 +442,32 @@ func (d Disk) Details() string {
 		p := d.Partitions[n]
 
 		if fsn < len(fss) && fss[fsn].Start < p.Start {
-			buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].Last), mbo(fss[fsn].Size()), "<free>")
+			buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].Last), mbo(fss[fsn].Size()), "<free>", "None")
 			fsn++
 		}
 
+		name := p.Name
+		if name == "" {
+			name = "N/A"
+		}
+
 		buf += fmt.Sprintf(lfmt,
-			fmt.Sprintf("%d", p.Number), mbo(p.Start), mbe(p.Last), mbo(p.Size()), p.Name)
+			fmt.Sprintf("%d", p.Number), mbo(p.Start), mbe(p.Last), mbo(p.Size()), name, type2str(p.Type))
 	}
 
 	if fsn < len(fss) {
-		buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].Last), mbo(fss[fsn].Size()), "<free>")
+		buf += fmt.Sprintf(lfmt, "-", mbo(fss[fsn].Start), mbe(fss[fsn].Last), mbo(fss[fsn].Size()), "<free>", "N/A")
 	}
 
 	return buf
+}
+
+func type2str(pt PartType) string {
+	if s, ok := partid.Text[pt]; ok {
+		return s
+	}
+
+	return pt.String()
 }
 
 // UdevInfo captures the udev information about a disk.

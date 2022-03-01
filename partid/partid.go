@@ -57,27 +57,52 @@ var (
 
 	// EFI - EFI Partition (C12A7328-F81F-11D2-BA4B-00A0C93EC93B)
 	EFI = [16]byte{0x28, 0x73, 0x2a, 0xc1, 0x1f, 0xf8, 0xd2, 0x11, 0xba, 0x4b, 0x0, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b}
+
+	// AtxReserved - F79962B9-24E6-9948-9F94-E6BFDAD2771F
+	AtxReserved = [16]byte{0xb9, 0x62, 0x99, 0xf7, 0xe6, 0x24, 0x48, 0x99, 0x9f, 0x94, 0xe6, 0xbf, 0xda, 0xd2, 0x77, 0x1f}
+
+	// AtxPBF - 01A3E19F-9FEA-ED47-92C2-E75639FF5601
+	AtxPBF = [16]byte{0x9f, 0xe1, 0xa3, 0x01, 0xea, 0x9f, 0x47, 0xed, 0x92, 0xc2, 0xe7, 0x56, 0x39, 0xff, 0x56, 0x01}
+
+	// AtxSBF - 01A3E19F-9FEA-ED47-92C2-E75639FF5602
+	AtxSBF = [16]byte{0x9f, 0xe1, 0xa3, 0x01, 0xea, 0x9f, 0x47, 0xed, 0x92, 0xc2, 0xe7, 0x56, 0x39, 0xff, 0x56, 0x02}
+
+	// AtxSignData - 8DEE18B1-77B5-1D25-AE89-2A252D1A422F
+	AtxSignData = [16]byte{0xb1, 0x18, 0xee, 0x8d, 0xb5, 0x77, 0x25, 0x1d, 0xae, 0x89, 0x2a, 0x25, 0x2d, 0x1a, 0x42, 0x2f}
+
+	// StoragedRaw - 26843217-D7A8-48E8-BBFC-6870C69BA060
+	StoragedRaw = [16]byte{0x17, 0x32, 0x84, 0x26, 0xa8, 0xd7, 0xe8, 0x48, 0xbb, 0xfc, 0x68, 0x70, 0xc6, 0x9b, 0xa0, 0x60}
+
+	// StoragedLVM - D5842A1E-DF14-4129-94DB-9C06DF842179
+	StoragedLVM = [16]byte{0x1e, 0x2a, 0x84, 0xd5, 0x14, 0xdf, 0x29, 0x41, 0x94, 0xdb, 0x9C, 0x06, 0xdf, 0x84, 0x21, 0x79}
 )
 
 // Text gives human readable names
 var Text = map[[16]byte]string{ // nolint:gochecknoglobals
-	EFI:             "EFI System Partition",
+	EFI:             "EFI",
 	LUKS:            "LUKS",
-	LinuxFS:         "Linux",
+	LinuxFS:         "Linux-FS",
 	LinuxRAID:       "RAID",
-	LinuxRootX86:    "Linux root (ia32)",
-	LinuxRootArm32:  "Linux root (arm32)",
-	LinuxRootX86_64: "Linux root (x86_64)",
-	LinuxRootArm64:  "Linux root (arm64)",
-	LinuxDMCrypt:    "dm-crypt",
-	LinuxReserved:   "Linux Reserved",
+	LinuxRootX86:    "Linux-root-x86",
+	LinuxRootArm32:  "Linux-root-arm32",
+	LinuxRootX86_64: "Linux-root-x86_64",
+	LinuxRootArm64:  "Linux-root-arm64",
+	LinuxDMCrypt:    "DM-crypt",
+	LinuxReserved:   "Linux-Reserved",
 	LinuxLVM:        "LVM",
-	LinuxBoot:       "Linux /boot",
-	LinuxSwap:       "Linux swap",
-	LinuxHome:       "Linux /home",
-	LinuxSrv:        "Linux /srv",
+	LinuxBoot:       "Linux-/boot",
+	LinuxSwap:       "Linux-swap",
+	LinuxHome:       "Linux-/home",
+	LinuxSrv:        "Linux-/srv",
 	MBR:             "MBR",
-	BiosBoot:        "Bios Boot Partition",
+	BiosBoot:        "Bios-Boot",
+	StoragedRaw:     "Storaged-Raw",
+	StoragedLVM:     "Storaged-LVM",
+	AtxPBF:          "Atomix-PBF",
+	AtxReserved:     "Atomix-Reserved",
+	AtxPBF:          "Atomix-PBF",
+	AtxSBF:          "Atomix-SBF",
+	AtxSignData:     "Atomix-SignData",
 }
 
 // nolint: gochecknoglobals,gomnd
