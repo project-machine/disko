@@ -104,6 +104,72 @@ func genEmptyDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 	return disk, nil
 }
 
+func TestCreatePartitionsMBR(t *testing.T) {
+	ast := assert.New(t)
+
+	tmpd, err := ioutil.TempDir("", "disko_test")
+	if err != nil {
+		t.Fatalf("Failed to create tempdir: %s", err)
+	}
+
+	defer os.RemoveAll(tmpd)
+
+	disk, err := genEmptyDisk(tmpd, 50*disko.Mebibyte)
+	if err != nil {
+		t.Fatalf("Creation of temp disk failed: %s", err)
+	}
+
+	disk.Table = disko.MBR
+
+	part1 := disko.Partition{
+		Start:  4 * disko.Mebibyte,
+		Last:   20*disko.Mebibyte - 1,
+		Type:   partid.LinuxFS,
+		Name:   "ignored-for-mbr",
+		ID:     disko.GenGUID(),
+		Number: uint(1),
+	}
+
+	pSet := disko.PartitionSet{1: part1}
+
+	sys := System()
+	if err := sys.CreatePartitions(disk, pSet); err != nil {
+		t.Errorf("CreatePartitions failed: %s", err)
+	}
+
+	fp, err := os.Open(disk.Path)
+	if err != nil {
+		t.Fatalf("Failed to open disk image %s: %s", disk.Path, err)
+	}
+
+	pSetFound, _, _, err := findPartitions(fp)
+	if err != nil {
+		t.Fatalf("Failed to findPartitions on %s: %s", disk.Path, err)
+	}
+
+	if len(pSetFound) != len(pSet) {
+		t.Errorf("Scanned found %d partitions, expected %d", len(pSetFound), len(pSet))
+	}
+
+	mbrTypeLinux := disko.PartType{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x83}
+	expPart1 := part1
+	expPart1.Type = mbrTypeLinux
+	expPart1.Name = ""
+	expPart1.ID = disko.GUID{}
+
+	scannedDisk, err := sys.ScanDisk(disk.Path)
+	if err != nil {
+		t.Errorf("Failed to scan disk-image")
+	}
+
+	ast.Equal(expPart1, pSetFound[1])
+
+	ast.Equal(disk.Size, scannedDisk.Size)
+	ast.Equal(disko.FILESYSTEM, scannedDisk.Attachment)
+	ast.Equal(disko.TYPEFILE, scannedDisk.Type)
+	ast.Equal(disko.MBR, scannedDisk.Table)
+}
+
 func TestCreatePartitions(t *testing.T) {
 	ast := assert.New(t)
 
