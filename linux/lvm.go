@@ -257,7 +257,7 @@ func (ls *linuxLVM) HasVG(vgName string) bool {
 func (ls *linuxLVM) CryptFormat(vgName string, lvName string, key string) error {
 	return runCommandStdin(
 		key,
-		"cryptsetup", "luksFormat", "--key-file=-", lvPath(vgName, lvName))
+		"cryptsetup", "luksFormat", "--type=luks2", "--key-file=-", lvPath(vgName, lvName))
 }
 
 func (ls *linuxLVM) CryptOpen(vgName string, lvName string,
