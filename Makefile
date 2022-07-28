@@ -1,4 +1,5 @@
-VERSION := $(shell x=$$(git describe --tags) && echo $${x\#v} || echo unknown)
+HASH = \#
+VERSION := $(shell x=$$(git describe --tags) && echo $${x$(HASH)v} || echo unknown)
 VERSION_SUFFIX := $(shell [ -z "$$(git status --porcelain --untracked-files=no)" ] || echo -dirty)
 VERSION_FULL := $(VERSION)$(VERSION_SUFFIX)
 LDFLAGS := "${ldflags:+$ldflags }-X main.version=${ver}${suff}"
