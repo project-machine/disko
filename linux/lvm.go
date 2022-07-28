@@ -1,8 +1,11 @@
 package linux
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"path"
 	"strings"
 
@@ -303,6 +306,7 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 	nameFlag := "--name=" + name
 	sizeB := fmt.Sprintf("%dB", size)
 	vglv := vgLv(vgName, name)
+	vgRealName := vgName
 
 	// Missing cases: LVTypeUnknown
 	//exhaustive:ignore
@@ -314,7 +318,8 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 				fmt.Errorf("%s: vgName input for THIN LV name in format <vgname>/thinDataName", vgName)
 		}
 
-		vglv = vgLv(strings.Split(vgName, "/")[0], name)
+		vgRealName = strings.Split(vgName, "/")[0]
+		vglv = vgLv(vgRealName, name)
 
 		// creation of thin volumes are always zero'd, and passing '--zero=y' will fail.
 		if err := createLVCmd("--virtualsize="+sizeB, nameFlag, vgName); err != nil {
@@ -324,10 +329,20 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 		if err := createLVCmd("--zero=y", "--wipesignatures=y", "--size="+sizeB, nameFlag, vgName); err != nil {
 			return nilLV, err
 		}
+
 	case disko.THINPOOL:
 		// When creating a THINPOOL, the name is the thin pool name.
 		if err := createThinPool(name, vgName, size, thinPoolMetaDataSize); err != nil {
 			return nilLV, err
+		}
+	}
+
+	if lvType == disko.THICK || lvType == disko.THIN {
+		if passed, err := checkThenZero(lvPath(vgRealName, name)); err != nil {
+			return nilLV, err
+		} else if !passed {
+			// we really need logging here.
+			fmt.Fprintf(os.Stderr, "DISKO_LVCREATE_DID_NOT_ZERO(%s)\n", vglv)
 		}
 	}
 
@@ -342,6 +357,66 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 	}
 
 	return lvs[name], nil
+}
+
+// checkThenZero - check 4096 bytes at front and end, verify they are zero.
+// If they are not, zero them.
+// return bool indicating if a zero was done and an error on error.
+func checkThenZero(path string) (bool, error) {
+	wipeLen := int(4096)
+	bufZero := make([]byte, wipeLen)
+	buf := make([]byte, wipeLen)
+	wasZero := true
+
+	fp, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+
+	defer fp.Close()
+
+	n, err := fp.Read(buf)
+	if err != nil {
+		return false, err
+	}
+
+	if n != wipeLen {
+		return false, fmt.Errorf("short read start of %d on %s", n, path)
+	}
+
+	if !bytes.Equal(bufZero, buf) {
+		wasZero = false
+	}
+
+	pos, err := fp.Seek(int64(-wipeLen), io.SeekEnd)
+	if err != nil {
+		return false,
+			fmt.Errorf("seek to end failed. %s may be less than %d long", path, wipeLen)
+	}
+
+	fileLen := pos + int64(wipeLen)
+
+	n, err = fp.Read(buf)
+	if err != nil {
+		return false, err
+	}
+
+	if n != wipeLen {
+		return false, fmt.Errorf("short read end of %d on %s", n, path)
+	}
+
+	if !bytes.Equal(bufZero, buf) {
+		wasZero = false
+	}
+
+	if wasZero {
+		return wasZero, nil
+	}
+
+	return false, withLockedFile(path,
+		func(fp *os.File, fInfo os.FileInfo) error {
+			return zeroStartEnd(fp, int64(0), fileLen, int64(wipeLen))
+		})
 }
 
 func (ls *linuxLVM) RenameLV(vgName string, lvName string, newLvName string) error {

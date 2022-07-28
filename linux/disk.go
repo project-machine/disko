@@ -352,7 +352,8 @@ func wipeDisk(disk disko.Disk) error {
 	}
 	defer fp.Close()
 
-	if err := zeroStartEnd(fp, int64(0), int64(disk.Size)); err != nil {
+	const wipeLen = int64(disko.Mebibyte)
+	if err := zeroStartEnd(fp, int64(0), int64(disk.Size), wipeLen); err != nil {
 		return err
 	}
 
@@ -364,7 +365,7 @@ func wipeDisk(disk disko.Disk) error {
 			end = disk.Size
 		}
 
-		if err := zeroStartEnd(fp, int64(p.Start), int64(end)); err != nil {
+		if err := zeroStartEnd(fp, int64(p.Start), int64(end), wipeLen); err != nil {
 			return err
 		}
 	}
@@ -372,28 +373,27 @@ func wipeDisk(disk disko.Disk) error {
 	return nil
 }
 
-// zeroStartEnd - zero the start and end provided with 1MiB bytes of zeros.
-func zeroStartEnd(fp io.WriteSeeker, start int64, last int64) error {
+// zeroStartEnd - zero the start and end provided with wipeLen bytes of zeros.
+func zeroStartEnd(fp io.WriteSeeker, start int64, last int64, wipeLen int64) error {
 	if last <= start {
 		return fmt.Errorf("last %d < start %d", last, start)
 	}
 
-	wlen := int64(disko.Mebibyte)
-	bufZero := make([]byte, wlen)
+	bufZero := make([]byte, wipeLen)
 
 	// 3 cases.
-	// a.) start + wlen < last - wlen (two full writes)
-	// b.) start + wlen >= last (one possibly short write)
-	// c.) start + wlen >= last - wlen (overlapping zero ranges)
+	// a.) start + wipeLen < last - wipeLen (two full writes)
+	// b.) start + wipeLen >= last (one possibly short write)
+	// c.) start + wipeLen >= last - wipeLen (overlapping zero ranges)
 	type ws struct{ start, size int64 }
-	var writes = []ws{{start, wlen}, {last - wlen, wlen}}
+	var writes = []ws{{start, wipeLen}, {last - wipeLen, wipeLen}}
 	var wnum int
 	var err error
 
-	if start+wlen >= last {
+	if start+wipeLen >= last {
 		writes = []ws{{start, last - start}}
-	} else if start+wlen >= last-wlen {
-		writes = []ws{{start, wlen}, {start + wlen, last - (start + wlen)}}
+	} else if start+wipeLen >= last-wipeLen {
+		writes = []ws{{start, wipeLen}, {start + wipeLen, last - (start + wipeLen)}}
 	}
 
 	for _, w := range writes {
@@ -436,6 +436,8 @@ func addPartitionSetMBR(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 		return err
 	}
 
+	const wipeLen = int64(disko.Mebibyte)
+
 	for _, p := range pSet {
 		mPart := mbrTable.GetPartition(int(p.Number))
 		mPart.SetLBAStart(uint32(p.Start) / uint32(d.SectorSize))
@@ -448,7 +450,7 @@ func addPartitionSetMBR(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 
 		mPart.SetType(mbr.PartitionType(mType))
 
-		if err := zeroStartEnd(fp, int64(p.Start), int64(p.Last)); err != nil {
+		if err := zeroStartEnd(fp, int64(p.Start), int64(p.Last), wipeLen); err != nil {
 			return fmt.Errorf("failed to zero partition %d: %s", p.Number, err)
 		}
 	}
@@ -588,6 +590,7 @@ func addPartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 
 	maxEnd := ((d.Size - uint64(d.SectorSize)*33) / disko.Mebibyte) * disko.Mebibyte
 	minStart := disko.Mebibyte
+	const wipeLen = int64(disko.Mebibyte)
 
 	for _, p := range pSet {
 		gptTable.Partitions[p.Number-1] = toGPTPartition(p, d.SectorSize)
@@ -602,7 +605,7 @@ func addPartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 				p.Number, p.Last, maxEnd)
 		}
 
-		if err := zeroStartEnd(fp, int64(p.Start), int64(p.Last)); err != nil {
+		if err := zeroStartEnd(fp, int64(p.Start), int64(p.Last), wipeLen); err != nil {
 			return fmt.Errorf("failed to zero partition %d: %s", p.Number, err)
 		}
 	}
