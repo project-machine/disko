@@ -2,7 +2,9 @@ package linux
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"path"
 	"strings"
 
@@ -324,6 +326,10 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 		if err := createLVCmd("--zero=y", "--wipesignatures=y", "--size="+sizeB, nameFlag, vgName); err != nil {
 			return nilLV, err
 		}
+
+		if err := luks2Wipe(lvPath(vgName, name)); err != nil {
+			return nilLV, err
+		}
 	case disko.THINPOOL:
 		// When creating a THINPOOL, the name is the thin pool name.
 		if err := createThinPool(name, vgName, size, thinPoolMetaDataSize); err != nil {
@@ -342,6 +348,46 @@ func (ls *linuxLVM) CreateLV(vgName string, name string, size uint64,
 	}
 
 	return lvs[name], nil
+}
+
+// luks2Wipe - wipe luks2 from a file/device.
+// libblkid (used by wipefs and lvm) did not gain full wiping of luks2 metadata until 2.33.
+// Wipe it more completely here.
+func luks2Wipe(fpath string) error {
+	const zeroLen = 64
+	bufZero := make([]byte, zeroLen)
+
+	// possible offsets for luks2 seconday headers from cryptsetup/lib/luks2/luks2.h
+	offsets := []int64{
+		0x04000, 0x008000, 0x010000, 0x020000, 0x40000,
+		0x080000, 0x100000, 0x200000, 0x400000}
+
+	return withLockedFile(fpath,
+		func(fp *os.File, fInfo os.FileInfo) error {
+			var wlen int64
+			fileLen, err := fp.Seek(0, io.SeekEnd)
+			if err != nil {
+				return err
+			}
+			for _, offset := range offsets {
+				wlen = zeroLen
+				if offset >= fileLen {
+					continue
+				} else if offset > (fileLen - zeroLen) {
+					wlen = fileLen - offset
+				}
+				if _, err := fp.Seek(offset, io.SeekStart); err != nil {
+					return err
+				}
+				if n, err := fp.Write(bufZero[:wlen]); err != nil {
+					return err
+				} else if n != int(wlen) {
+					return fmt.Errorf("short write on %s at offset %x. wrote %d, tried %d",
+						fpath, offset, n, zeroLen)
+				}
+			}
+			return nil
+		})
 }
 
 func (ls *linuxLVM) RenameLV(vgName string, lvName string, newLvName string) error {

@@ -1,11 +1,12 @@
-VERSION := $(shell x=$$(git describe --tags) && echo $${x\#v} || echo unknown)
+HASH = \#
+VERSION := $(shell x=$$(git describe --tags) && echo $${x$(HASH)v} || echo unknown)
 VERSION_SUFFIX := $(shell [ -z "$$(git status --porcelain --untracked-files=no)" ] || echo -dirty)
 VERSION_FULL := $(VERSION)$(VERSION_SUFFIX)
 LDFLAGS := "${ldflags:+$ldflags }-X main.version=${ver}${suff}"
 BUILD_FLAGS := -ldflags "-X main.version=$(VERSION_FULL)"
 ENV_ROOT := $(shell [ "$$(id -u)" = "0" ] && echo env || echo sudo )
 
-GOLANGCI_VER = v1.43.0
+GOLANGCI_VER = v1.47.2
 GOLANGCI = ./tools/golangci-lint-$(GOLANGCI_VER)
 
 CMDS := demo/demo ptimg/ptimg
