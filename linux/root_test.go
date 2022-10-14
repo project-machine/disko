@@ -500,9 +500,14 @@ func TestRootLVMCreate(t *testing.T) {
 
 	lvm := linux.VolumeManager()
 
-	pv, err = lvm.CreatePV(disk.Path + "p1")
+	part1Path := disk.Path + "p1"
+	if err := runCommand("mkfs.ext4", "-F", part1Path); err != nil {
+		t.Errorf("Failed to mkfs on %s: %s", part1Path, err)
+	}
+
+	pv, err = lvm.CreatePV(part1Path)
 	if err != nil {
-		t.Fatalf("Failed to create pv on %s: %s\n", disk.Path, err)
+		t.Fatalf("Failed to create pv on %s: %s\n", part1Path, err)
 	}
 
 	cl.AddF(func() error { return lvm.DeletePV(pv) }, "remove pv")
