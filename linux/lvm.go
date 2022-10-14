@@ -173,7 +173,7 @@ func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
 		return nilPV, err
 	}
 
-	err = runCommandSettled("lvm", "pvcreate", "--zero=y",
+	err = runCommandSettled("lvm", "pvcreate", "--force", "--zero=y",
 		fmt.Sprintf("--metadatasize=%dB", pvMetaDataSize), path)
 
 	if err != nil {
@@ -207,9 +207,8 @@ func (ls *linuxLVM) HasPV(name string) bool {
 }
 
 func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
-	cmd := []string{"lvm", "vgcreate",
-		fmt.Sprintf("--metadatasize=%dB", pvMetaDataSize),
-		"--zero=y", name}
+	cmd := []string{"lvm", "vgcreate", "--force", "--zero=y",
+		fmt.Sprintf("--metadatasize=%dB", pvMetaDataSize), name}
 
 	for _, p := range pvs {
 		cmd = append(cmd, p.Path)
@@ -230,12 +229,25 @@ func (ls *linuxLVM) CreateVG(name string, pvs ...disko.PV) (disko.VG, error) {
 }
 
 func (ls *linuxLVM) ExtendVG(vgName string, pvs ...disko.PV) error {
-	cmd := []string{"lvm", "vgextend", "--zero=y", vgName}
+	// Have to create the PVs first in case they were dirty.
+	// pvcreate can be run on existing pvs.
+	// https://bugzilla.redhat.com/show_bug.cgi?id=2134912
+	pvPaths := []string{}
 	for _, p := range pvs {
-		cmd = append(cmd, p.Path)
+		pvPaths = append(pvPaths, p.Path)
 	}
 
+	cmd := append([]string{"lvm", "pvcreate", "--force", "--zero=y",
+		fmt.Sprintf("--metadatasize=%dB", pvMetaDataSize)}, pvPaths...)
+
 	err := runCommandSettled(cmd...)
+	if err != nil {
+		return err
+	}
+
+	cmd = append([]string{"lvm", "vgextend", "--zero=y", vgName}, pvPaths...)
+
+	err = runCommandSettled(cmd...)
 	if err != nil {
 		return err
 	}
