@@ -333,13 +333,13 @@ func TestWipeDisk(t *testing.T) {
 		buf[i] = 0xFF
 	}
 
-	// write 2MiB of 0xFF at first partition.
-	// Wipe should zero the first MiB
+	// write (scribble) 2MiB + 1k of 0xFF at first partition.
+	// Wipe should zero the first MiB and other offsets
 	if _, err := fp.Seek(int64(disk.Partitions[1].Start), io.SeekStart); err != nil {
 		t.Errorf("failed seek to part1 start: %s", err)
 	}
 
-	for i := 0; i < (2*int(mib))/len(buf); i++ {
+	for i := 0; i < (2*int(mib)+1)/len(buf); i++ {
 		if n, err := fp.Write(buf); n != len(buf) || err != nil {
 			t.Fatalf("failed to write 255 at %d\n", i)
 		}
@@ -363,7 +363,10 @@ func TestWipeDisk(t *testing.T) {
 	}){
 		{0, int(mib), 0x00, "disk start"},
 		{disk.Partitions[1].Start, int(mib), 0x00, "part1 start"},
-		{disk.Partitions[1].Start + mib, int(mib), 0xFF, "scribbled 1"},
+		{disk.Partitions[1].Start + mib, 4, 0x00, "VMFS vol member got wiped"},
+		{disk.Partitions[1].Start + mib + 4, int(mib) - 4, 0xFF, "scribbled 1"},
+		{disk.Partitions[1].Start + 2*mib, 4, 0x00, "VMFS got wiped"},
+		{disk.Partitions[1].Start + 2*mib + 4, 1, 0x00, "scribble 2"},
 		{disk.Size - mib, int(mib), 0x00, "disk end"},
 	} {
 		if _, err := fp.Seek(int64(c.start), io.SeekStart); err != nil {
