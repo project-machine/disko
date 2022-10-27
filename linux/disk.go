@@ -80,7 +80,7 @@ func getDiskType(udInfo disko.UdevInfo) (disko.DiskType, error) {
 		}
 	}
 
-	bd, err := getPartitionsBlockDevice(path.Join("/dev", kname))
+	bd, err := GetPartitionsBlockDevice(path.Join("/dev", kname))
 	if err != nil {
 		return disko.HDD, nil
 	}
@@ -309,9 +309,10 @@ func getSysPathForBlockDevicePath(dev string) (string, error) {
 	return syspath, nil
 }
 
-func getPartitionsBlockDevice(dev string) (string, error) {
-	// return the block device name ('sda') given input
-	// of 'sda1', /dev/sda1, or /dev/sda
+// GetPartitionsBlockDevice - return the block device name ('sda')
+// given input of a partition, either kname (sda1) or
+// /dev/sda1.  Can also be called on a disk and will return the disk.
+func GetPartitionsBlockDevice(dev string) (string, error) {
 	syspath, err := getSysPathForBlockDevicePath(dev)
 	if err != nil {
 		return "", err
