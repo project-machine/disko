@@ -379,22 +379,37 @@ func zeroStartEnd(fp io.WriteSeeker, start int64, last int64) error {
 		return fmt.Errorf("last %d < start %d", last, start)
 	}
 
-	wlen := int64(disko.Mebibyte)
+	mib := int64(disko.Mebibyte)
+	wlen := mib
 	bufZero := make([]byte, wlen)
 
-	// 3 cases.
-	// a.) start + wlen < last - wlen (two full writes)
-	// b.) start + wlen >= last (one possibly short write)
-	// c.) start + wlen >= last - wlen (overlapping zero ranges)
 	type ws struct{ start, size int64 }
-	var writes = []ws{{start, wlen}, {last - wlen, wlen}}
+	var writes []ws
 	var wnum int
 	var err error
 
+	// 3 cases.
+	// a.) [full zero] start + wlen >= last : one possibly short write
+	// b.) [full zero] start + wlen >= last - wlen : overlapping zero ranges
+	// c.) start + wlen < last - wlen : "normal", two full writes
 	if start+wlen >= last {
 		writes = []ws{{start, last - start}}
 	} else if start+wlen >= last-wlen {
 		writes = []ws{{start, wlen}, {start + wlen, last - (start + wlen)}}
+	} else {
+		writes = []ws{{start, wlen}}
+
+		// VMFS_volume_member is identified by 4 bytes at offset 1mib
+		if last > mib+4 {
+			writes = append(writes, ws{mib, 4})
+		}
+
+		// VMFS lives at 2mib in
+		if last > (mib*2 + 4) {
+			writes = append(writes, ws{mib * 2, 4})
+		}
+
+		writes = append(writes, ws{last - wlen, wlen})
 	}
 
 	for _, w := range writes {
