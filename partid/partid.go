@@ -78,34 +78,38 @@ var (
 
 	// StoragedLVM - D5842A1E-DF14-4129-94DB-9C06DF842179
 	StoragedLVM = [16]byte{0x1e, 0x2a, 0x84, 0xd5, 0x14, 0xdf, 0x29, 0x41, 0x94, 0xdb, 0x9C, 0x06, 0xdf, 0x84, 0x21, 0x79}
+
+	// Microsoft Basic Data - EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+	MicrosoftBasicData = [16]byte{0xa2, 0xa0, 0xd0, 0xeb, 0xe5, 0xb9, 0x33, 0x44, 0x87, 0xc0, 0x68, 0xb6, 0xb7, 0x26, 0x99, 0xc7}
 )
 
 // Text gives human readable names
 var Text = map[[16]byte]string{ // nolint:gochecknoglobals
-	EFI:             "EFI",
-	LUKS:            "LUKS",
-	LinuxFS:         "Linux-FS",
-	LinuxRAID:       "RAID",
-	LinuxRootX86:    "Linux-root-x86",
-	LinuxRootArm32:  "Linux-root-arm32",
-	LinuxRootX86_64: "Linux-root-x86_64",
-	LinuxRootArm64:  "Linux-root-arm64",
-	LinuxDMCrypt:    "DM-crypt",
-	LinuxReserved:   "Linux-Reserved",
-	LinuxLVM:        "LVM",
-	LinuxBoot:       "Linux-/boot",
-	LinuxSwap:       "Linux-swap",
-	LinuxHome:       "Linux-/home",
-	LinuxSrv:        "Linux-/srv",
-	MBR:             "MBR",
-	BiosBoot:        "Bios-Boot",
-	StoragedRaw:     "Storaged-Raw",
-	StoragedLVM:     "Storaged-LVM",
-	AtxCargo:        "Atomix-Cargo",
-	AtxPBF:          "Atomix-PBF",
-	AtxReserved:     "Atomix-Reserved",
-	AtxSBF:          "Atomix-SBF",
-	AtxSignData:     "Atomix-SignData",
+	EFI:                "EFI",
+	LUKS:               "LUKS",
+	LinuxFS:            "Linux-FS",
+	LinuxRAID:          "RAID",
+	LinuxRootX86:       "Linux-root-x86",
+	LinuxRootArm32:     "Linux-root-arm32",
+	LinuxRootX86_64:    "Linux-root-x86_64",
+	LinuxRootArm64:     "Linux-root-arm64",
+	LinuxDMCrypt:       "DM-crypt",
+	LinuxReserved:      "Linux-Reserved",
+	LinuxLVM:           "LVM",
+	LinuxBoot:          "Linux-/boot",
+	LinuxSwap:          "Linux-swap",
+	LinuxHome:          "Linux-/home",
+	LinuxSrv:           "Linux-/srv",
+	MBR:                "MBR",
+	BiosBoot:           "Bios-Boot",
+	StoragedRaw:        "Storaged-Raw",
+	StoragedLVM:        "Storaged-LVM",
+	AtxCargo:           "Atomix-Cargo",
+	AtxPBF:             "Atomix-PBF",
+	AtxReserved:        "Atomix-Reserved",
+	AtxSBF:             "Atomix-SBF",
+	AtxSignData:        "Atomix-SignData",
+	MicrosoftBasicData: "MS-BasicData",
 }
 
 // nolint: gochecknoglobals,gomnd
