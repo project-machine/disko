@@ -33,7 +33,7 @@ check: lint gofmt
 gofmt: .gofmt
 
 .gofmt: $(ALL_GO_FILES)
-	o=$$(gofmt -l -w .) && [ -z "$$o" ] || { echo "gofmt made changes: $$o"; exit 1; }
+	o=$$(gofmt -s -l -w .) && [ -z "$$o" ] || { echo "gofmt made changes: $$o"; exit 1; }
 	@touch $@
 
 
