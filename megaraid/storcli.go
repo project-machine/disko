@@ -398,7 +398,8 @@ func parseCxShow(cmdOut string) (VirtDriveSet, DriveSet, error) {
 }
 
 // parseVirtProperties - return properties map ("VD0 Properties") by VirtDrive ID
-//    cmdOut is output of 'storcli /c0/vall show all'
+//
+//	cmdOut is output of 'storcli /c0/vall show all'
 func parseVirtProperties(cmdOut string) (map[int](map[string]string), error) {
 	var vID int
 	var err error

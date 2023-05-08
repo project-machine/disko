@@ -5,10 +5,10 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go 1.13
-      uses: actions/setup-go@v1
+    - name: Set up Go
+      uses: actions/setup-go@v4
       with:
-        go-version: 1.13
+        go-version: '1.20.x'
       id: go
 
     - name: Check out code into the Go module directory
@@ -22,6 +22,10 @@ jobs:
       run: |
         sudo apt-get update --quiet
         sudo apt-get install --quiet --assume-yes --no-install-recommends lvm2 thin-provisioning-tools
+
+    - name: gofmt
+      run: |
+        make gofmt
 
     - name: build
       run: |

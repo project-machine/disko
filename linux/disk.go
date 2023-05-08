@@ -32,7 +32,7 @@ var ErrNoPartitionTable = errors.New("no Partition Table Found")
 
 var xenbusSysPathMatch = regexp.MustCompile(`/devices/vbd-\d+/block/`)
 
-// nolint: gochecknoglobals
+//nolint:gochecknoglobals
 var emptyGUID = disko.GUID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 
 // toGPTPartition - convert the Partition type into a gpt.Partition
@@ -66,7 +66,8 @@ func gptToDiskoPartition(p gpt.Partition, num uint, sectorSize uint) disko.Parti
 }
 
 // getDiskType(udInfo) return the diskType for the disk represented
-//   by the udev info provided.  Supports a block device
+//
+//	by the udev info provided.  Supports a block device
 func getDiskType(udInfo disko.UdevInfo) (disko.DiskType, error) {
 	var kname = udInfo.Name
 
@@ -340,7 +341,7 @@ func getPartName(s string) [72]byte {
 
 	for i, r := range codes {
 		b[i*2] = byte(r)
-		b[i*2+1] = byte(r >> 8) // nolint:gomnd
+		b[i*2+1] = byte(r >> 8) //nolint:gomnd
 	}
 
 	return b
@@ -526,7 +527,7 @@ func updatePartitionSetMBR(_ *os.File, d disko.Disk, pSet disko.PartitionSet) er
 		len(pSet), d.Path)
 }
 
-// nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
+//nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
 func updatePartitions(d disko.Disk, pSet disko.PartitionSet) error {
 	err := withLockedFile(d.Path,
 		func(fp *os.File, fInfo os.FileInfo) error {
@@ -631,8 +632,10 @@ func addPartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pSet disko.Partitio
 }
 
 // addPartitionSet - open the disk, add partitions.
-//     Caller's responsibility to udevSettle
-// nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
+//
+//	Caller's responsibility to udevSettle
+//
+//nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
 func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 	if d.Table != disko.MBR && d.Table != disko.GPT && d.Table != disko.TableNone {
 		return fmt.Errorf("cannot add partition disk %s with table type %s", d.Name, d.Table)
@@ -729,7 +732,7 @@ func deletePartitionSetGPT(fp io.ReadWriteSeeker, d disko.Disk, pNums []uint) er
 	return nil
 }
 
-// nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
+//nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
 func withLockedFile(path string, cb func(*os.File, os.FileInfo) error) error {
 	fp, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
@@ -758,8 +761,9 @@ func withLockedFile(path string, cb func(*os.File, os.FileInfo) error) error {
 }
 
 // kernelDelParts - ask the kernel to remove a partition, and then remove it from /dev.
-//  this can be executed with a lock.  successful 'delpart /dev/disk 3' will remove all
-//  symlinks in /dev/ to /dev/disk3 even if disk is locked.
+//
+//	this can be executed with a lock.  successful 'delpart /dev/disk 3' will remove all
+//	symlinks in /dev/ to /dev/disk3 even if disk is locked.
 func kernelDelParts(d disko.Disk, pNums []uint) error {
 	for _, pNum := range pNums {
 		bPath := fmt.Sprintf("/sys/class/block/%s", GetPartitionKname(d.Name, pNum))
@@ -810,7 +814,7 @@ func genPartChangeUEvent(d disko.Disk, pSet disko.PartitionSet) error {
 	return nil
 }
 
-// nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
+//nolint:scopelint // https://github.com/kyoh86/scopelint/issues/12
 func deletePartitions(d disko.Disk, pNums []uint) error {
 	return withLockedFile(d.Path, func(fp *os.File, fInfo os.FileInfo) error {
 		if d.Table == disko.MBR {

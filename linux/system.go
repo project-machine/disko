@@ -29,7 +29,8 @@ func System() disko.System {
 // example below, of an azure vmbus disk that is ephemeral.
 // matching intent of /lib/udev/rules.d/66-azure-ephemeral.rules
 // /devices/LNXSYSTM:00/LNXSYBUS:00/PNP0A03:00/device:07/VMBUS:01/00000000-0001-8899-0000-000000000000/
-//      host1/target1:0:1/1:0:1:0/block/sdb
+//
+//	host1/target1:0:1/1:0:1:0/block/sdb
 var vmbusSyspathEphemeral = regexp.MustCompile(`.*/VMBUS:\d\d/00000000-0001-\d{4}-\d{4}-\d{12}/host.*`)
 
 func (ls *linuxSystem) ScanAllDisks(filter disko.DiskFilter) (disko.DiskSet, error) {
@@ -123,7 +124,7 @@ func getDiskProperties(d disko.UdevInfo) disko.PropertySet {
 	return props
 }
 
-// nolint: funlen
+//nolint:funlen
 func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 	var err error
 	var blockdev = true

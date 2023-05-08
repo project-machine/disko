@@ -24,7 +24,7 @@ const (
 
 var systemVirtType = virtUnset //nolint:gochecknoglobals
 
-var virtTypesToString = map[virtType]string{ // nolint:gochecknoglobals
+var virtTypesToString = map[virtType]string{ //nolint:gochecknoglobals
 	virtUnset:     "unset",
 	virtUnknown:   "unknown",
 	virtNone:      "none",

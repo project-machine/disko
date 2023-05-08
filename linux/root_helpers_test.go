@@ -102,7 +102,8 @@ func runCommandWithOutputErrorRc(args ...string) ([]byte, []byte, int) {
 }
 
 // connectLoop - connect fname to a loop device.
-//   return cleanup, devicePath, error
+//
+//	return cleanup, devicePath, error
 func connectLoop(fname string) (func() error, string, error) {
 	var cmd = []string{"losetup", "--find", "--show", "--partscan", fname}
 	var stdout, stderr []byte
@@ -179,6 +180,7 @@ func getTempFile(size int64) (cleaner, string) {
 }
 
 // we don't need crypto/math random numbers to construct a random string
+//
 //nolint:gosec
 func randStr(n int) string {
 	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -318,7 +320,7 @@ func iSkipOrFail(t *testing.T, checks ...func() error) {
 	t.FailNow()
 }
 
-// nolint: gochecknoinits
+//nolint:gochecknoinits
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }

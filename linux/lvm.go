@@ -469,10 +469,11 @@ func chompBytes(data []byte) []byte {
 
 // getLuksInfo - get luks information for the provided block device path)
 // returns:
-//    crypt - boolean indicating if device is encrypted.
-//    cryptName - name of crypt dev if device is open - "" if not encrypted.
-//    cryptPath - path of crypt dev if device is open - "" if not encrypted.
-//    error - nil unless an error occurred.
+//
+//	crypt - boolean indicating if device is encrypted.
+//	cryptName - name of crypt dev if device is open - "" if not encrypted.
+//	cryptPath - path of crypt dev if device is open - "" if not encrypted.
+//	error - nil unless an error occurred.
 func getLuksInfo(devpath string) (bool, string, string, error) {
 	crypt := false
 

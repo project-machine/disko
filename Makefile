@@ -6,7 +6,7 @@ LDFLAGS := "${ldflags:+$ldflags }-X main.version=${ver}${suff}"
 BUILD_FLAGS := -ldflags "-X main.version=$(VERSION_FULL)"
 ENV_ROOT := $(shell [ "$$(id -u)" = "0" ] && echo env || echo sudo )
 
-GOLANGCI_VER = v1.47.2
+GOLANGCI_VER = v1.52.2
 GOLANGCI = ./tools/golangci-lint-$(GOLANGCI_VER)
 
 CMDS := demo/demo ptimg/ptimg
@@ -33,7 +33,7 @@ check: lint gofmt
 gofmt: .gofmt
 
 .gofmt: $(ALL_GO_FILES)
-	o=$$(gofmt -l -w .) && [ -z "$$o" ] || { echo "gofmt made changes: $$o"; exit 1; }
+	o=$$(gofmt -s -l -w .) && [ -z "$$o" ] || { echo "gofmt made changes: $$o"; exit 1; }
 	@touch $@
 
 

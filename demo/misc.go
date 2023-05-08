@@ -125,7 +125,7 @@ func findPartInfo(diskPath string) (disko.Partition, error) {
 	return part, nil
 }
 
-//nolint: gocognit, gocyclo, funlen
+//nolint:gocognit, gocyclo, funlen
 func miscUpDown(c *cli.Context) error {
 	fname := c.Args().First()
 

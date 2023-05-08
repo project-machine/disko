@@ -1,7 +1,7 @@
 //go:build linux && !skipIntegration
 // +build linux,!skipIntegration
 
-// nolint:errcheck,funlen
+//nolint:errcheck,funlen
 package linux_test
 
 import (

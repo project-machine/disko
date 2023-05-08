@@ -6,7 +6,7 @@ import (
 	"github.com/anuvu/disko"
 )
 
-//nolint: funlen
+//nolint:funlen
 func TestLVDataToLV(t *testing.T) {
 	var mySize uint64 = 10 * 1024 * 1024
 	const aUUID = "iFMHAp-24c3-LENS-0IFt-4Mhj-rvhf-kBnnuS"

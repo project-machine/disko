@@ -21,8 +21,10 @@ func (r uRanges) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 
 // findRangeGaps returns a set of uRange to represent the un-used
 // uint64 between min and max that are not included in ranges.
-//  findRangeGaps({{10, 40}, {50, 100}}, 0, 110}) ==
-//      {{0, 9}, {41, 49}, {101, 110}}
+//
+//	findRangeGaps({{10, 40}, {50, 100}}, 0, 110}) ==
+//	    {{0, 9}, {41, 49}, {101, 110}}
+//
 // Note that input list will be sorted.
 func findRangeGaps(ranges uRanges, min, max uint64) uRanges {
 	// start 'ret' off with full range of min to max, then start cutting it up.
