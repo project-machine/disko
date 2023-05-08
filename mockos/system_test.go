@@ -9,7 +9,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-//nolint: funlen
+//nolint:funlen
 func TestSystem(t *testing.T) {
 	myID, _ := disko.StringToGUID("01234567-89AB-CDEF-0123-456789ABCDEF")
 

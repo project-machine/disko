@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// nolint: funlen
+//nolint:funlen
 func TestGetAttachType(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(
@@ -302,7 +302,7 @@ func TestMyPartitionMBR(t *testing.T) {
 	}
 }
 
-// nolint: funlen
+//nolint:funlen
 func TestWipeDisk(t *testing.T) {
 	tmpd, err := ioutil.TempDir("", "disko_test")
 	if err != nil {

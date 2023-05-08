@@ -148,7 +148,7 @@ const (
 	LVTypeUnknown
 )
 
-// nolint: gochecknoglobals
+//nolint:gochecknoglobals
 var lvTypes = map[string]LVType{
 	"THICK":    THICK,
 	"THIN":     THIN,

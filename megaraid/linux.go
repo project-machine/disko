@@ -10,8 +10,9 @@ import (
 const sysDriverMegaRaidSAS = "/sys/bus/pci/drivers/megaraid_sas"
 
 // IsMegaRaidSysPath - is this sys path (udevadm info's DEVPATH) on a megaraid controller.
-//  syspath will look something like
-//     /devices/pci0000:3a/0000:3a:02.0/0000:3c:00.0/host0/target0:2:2/0:2:2:0/block/sdc
+//
+//	syspath will look something like
+//	   /devices/pci0000:3a/0000:3a:02.0/0000:3c:00.0/host0/target0:2:2/0:2:2:0/block/sdc
 func IsMegaRaidSysPath(syspath string) bool {
 	if !strings.HasPrefix(syspath, "/sys") {
 		syspath = "/sys" + syspath

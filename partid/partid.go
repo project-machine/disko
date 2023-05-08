@@ -2,7 +2,7 @@ package partid
 
 import "fmt"
 
-// nolint:gochecknoglobals,lll
+//nolint:gochecknoglobals,lll
 var (
 	// Empty - Unused / Empty partition
 	Empty = [16]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
@@ -84,7 +84,7 @@ var (
 )
 
 // Text gives human readable names
-var Text = map[[16]byte]string{ // nolint:gochecknoglobals
+var Text = map[[16]byte]string{ //nolint:gochecknoglobals
 	EFI:                "EFI",
 	LUKS:               "LUKS",
 	LinuxFS:            "Linux-FS",
@@ -112,7 +112,7 @@ var Text = map[[16]byte]string{ // nolint:gochecknoglobals
 	MicrosoftBasicData: "MS-BasicData",
 }
 
-// nolint: gochecknoglobals,gomnd
+//nolint:gochecknoglobals,gomnd
 var mapGPTToMBR = map[[16]byte]byte{
 	Empty:     0x00,
 	LinuxSwap: 0x82,

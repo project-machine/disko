@@ -106,7 +106,7 @@ func runCommandWithOutputErrorRcStdin(input string, args ...string) ([]byte, []b
 
 	go func() {
 		defer stdin.Close()
-		io.WriteString(stdin, input) // nolint:errcheck
+		io.WriteString(stdin, input) //nolint:errcheck
 	}()
 
 	var stdout, stderr bytes.Buffer
@@ -550,7 +550,7 @@ func handleCommand(exCmd []string, subs map[string]string) error {
 	return nil
 }
 
-//nolint: funlen
+//nolint:funlen
 func partCreate(c *cli.Context) error {
 	var err error
 	var ptNum uint
