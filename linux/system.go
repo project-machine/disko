@@ -10,8 +10,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/anuvu/disko"
-	"github.com/anuvu/disko/megaraid"
+	"machinerun.io/disko"
+	"machinerun.io/disko/megaraid"
 	"golang.org/x/sys/unix"
 )
 

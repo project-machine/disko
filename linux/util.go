@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/anuvu/disko"
+	"machinerun.io/disko"
 	"github.com/pkg/errors"
 )
 

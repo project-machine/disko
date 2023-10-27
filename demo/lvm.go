@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/anuvu/disko"
-	"github.com/anuvu/disko/linux"
+	"machinerun.io/disko"
+	"machinerun.io/disko/linux"
 	"github.com/urfave/cli/v2"
 )
 

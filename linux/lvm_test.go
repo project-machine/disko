@@ -3,7 +3,7 @@ package linux
 import (
 	"testing"
 
-	"github.com/anuvu/disko"
+	"machinerun.io/disko"
 )
 
 //nolint:funlen

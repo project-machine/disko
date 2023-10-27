@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/anuvu/disko"
+	"machinerun.io/disko"
 )
 
 // System returns a mock os implementation of the disk.System interface.

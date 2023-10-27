@@ -3,7 +3,7 @@ package partid_test
 import (
 	"testing"
 
-	"github.com/anuvu/disko/partid"
+	"machinerun.io/disko/partid"
 )
 
 func TestPartID(t *testing.T) {

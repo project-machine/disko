@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/anuvu/disko/megaraid"
+	"machinerun.io/disko/megaraid"
 	"github.com/urfave/cli/v2"
 )
 

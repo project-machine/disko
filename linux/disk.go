@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"unicode/utf16"
 
-	"github.com/anuvu/disko"
-	"github.com/anuvu/disko/partid"
+	"machinerun.io/disko"
+	"machinerun.io/disko/partid"
 	"github.com/rekby/gpt"
 	"github.com/rekby/mbr"
 	"golang.org/x/sys/unix"

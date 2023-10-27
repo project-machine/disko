@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anuvu/disko"
-	"github.com/anuvu/disko/partid"
+	"machinerun.io/disko"
+	"machinerun.io/disko/partid"
 )
 
 func TestFreeSpaceSize(t *testing.T) {

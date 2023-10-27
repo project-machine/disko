@@ -6,9 +6,9 @@ import (
 	"path"
 	"regexp"
 
-	"github.com/anuvu/disko"
-	"github.com/anuvu/disko/linux"
-	"github.com/anuvu/disko/partid"
+	"machinerun.io/disko"
+	"machinerun.io/disko/linux"
+	"machinerun.io/disko/partid"
 	"github.com/urfave/cli/v2"
 )
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anuvu/disko"
+	"machinerun.io/disko"
 )
 
 var valid = map[string]disko.LVType{

@@ -3,9 +3,9 @@ package mockos_test
 import (
 	"testing"
 
-	"github.com/anuvu/disko"
-	"github.com/anuvu/disko/mockos"
-	"github.com/anuvu/disko/partid"
+	"machinerun.io/disko"
+	"machinerun.io/disko/mockos"
+	"machinerun.io/disko/partid"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

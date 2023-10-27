@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/anuvu/disko"
+	"machinerun.io/disko"
 )
 
 type mockLVM struct {

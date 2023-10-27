@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/anuvu/disko"
+	"machinerun.io/disko"
 	"github.com/stretchr/testify/assert"
 )
 

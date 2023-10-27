@@ -8,8 +8,8 @@ import (
 	"path"
 	"testing"
 
-	"github.com/anuvu/disko"
-	"github.com/anuvu/disko/partid"
+	"machinerun.io/disko"
+	"machinerun.io/disko/partid"
 	"github.com/stretchr/testify/assert"
 )
 

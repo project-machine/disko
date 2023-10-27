@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/anuvu/disko/partid"
+	"machinerun.io/disko/partid"
 )
 
 // DiskType enumerates supported disk types.

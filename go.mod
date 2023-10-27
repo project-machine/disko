@@ -1,4 +1,4 @@
-module github.com/anuvu/disko
+module machinerun.io/disko
 
 go 1.13
 

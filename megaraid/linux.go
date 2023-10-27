@@ -42,7 +42,7 @@ func NameByDiskID(id int) (string, error) {
 	// given ID, we expect a single file in:
 	// <sysDriverMegaRaidSAS>/0000:05:00.0/host0/target0:0:<ID>/0:0:<ID>:0/block/
 	// Note: This does not work for some megaraid controllers such as SAS3508
-	// See https://github.com/anuvu/disko/issues/101
+	// See https://machinerun.io/disko/issues/101
 	idStr := fmt.Sprintf("%d", id)
 	blkDir := sysDriverMegaRaidSAS + "/*/host*/target0:0:" + idStr + "/0:0:" + idStr + ":0/block/*"
 	matches, err := filepath.Glob(blkDir)

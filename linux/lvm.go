@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/anuvu/disko"
+	"machinerun.io/disko"
 )
 
 const pvMetaDataSize = 128 * disko.Mebibyte
