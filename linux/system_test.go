@@ -7,9 +7,9 @@ import (
 	"path"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"machinerun.io/disko"
 	"machinerun.io/disko/partid"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGetDiskProperties(t *testing.T) {

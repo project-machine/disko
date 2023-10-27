@@ -6,10 +6,10 @@ import (
 	"path"
 	"regexp"
 
+	"github.com/urfave/cli/v2"
 	"machinerun.io/disko"
 	"machinerun.io/disko/linux"
 	"machinerun.io/disko/partid"
-	"github.com/urfave/cli/v2"
 )
 
 const partitionName = "updown"

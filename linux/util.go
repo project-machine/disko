@@ -13,8 +13,8 @@ import (
 	"strings"
 	"syscall"
 
-	"machinerun.io/disko"
 	"github.com/pkg/errors"
+	"machinerun.io/disko"
 )
 
 // GetUdevInfo return a UdevInfo for the device with kernel name kname.

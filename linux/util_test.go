@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"machinerun.io/disko"
 	"github.com/stretchr/testify/assert"
+	"machinerun.io/disko"
 )
 
 func TestParseUdevInfo(t *testing.T) {

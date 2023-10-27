@@ -3,10 +3,10 @@ package mockos_test
 import (
 	"testing"
 
+	. "github.com/smartystreets/goconvey/convey"
 	"machinerun.io/disko"
 	"machinerun.io/disko/mockos"
 	"machinerun.io/disko/partid"
-	. "github.com/smartystreets/goconvey/convey"
 )
 
 //nolint:funlen

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"syscall"
 
+	"golang.org/x/sys/unix"
 	"machinerun.io/disko"
 	"machinerun.io/disko/megaraid"
-	"golang.org/x/sys/unix"
 )
 
 type linuxSystem struct {

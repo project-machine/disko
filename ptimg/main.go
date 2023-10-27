@@ -16,10 +16,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/urfave/cli/v2"
 	"machinerun.io/disko"
 	"machinerun.io/disko/linux"
 	"machinerun.io/disko/partid"
-	"github.com/urfave/cli/v2"
 )
 
 var version string

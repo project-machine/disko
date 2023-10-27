@@ -8,9 +8,9 @@ import (
 	"path"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"machinerun.io/disko"
 	"machinerun.io/disko/partid"
-	"github.com/stretchr/testify/assert"
 )
 
 //nolint:funlen

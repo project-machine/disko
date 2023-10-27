@@ -14,11 +14,11 @@ import (
 	"syscall"
 	"unicode/utf16"
 
-	"machinerun.io/disko"
-	"machinerun.io/disko/partid"
 	"github.com/rekby/gpt"
 	"github.com/rekby/mbr"
 	"golang.org/x/sys/unix"
+	"machinerun.io/disko"
+	"machinerun.io/disko/partid"
 )
 
 const (

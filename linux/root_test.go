@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/sys/unix"
 	"machinerun.io/disko"
 	"machinerun.io/disko/linux"
 	"machinerun.io/disko/partid"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/sys/unix"
 )
 
 const MiB = 1024 * 1024
