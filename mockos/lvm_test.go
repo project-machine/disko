@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/smartystreets/goconvey/convey"
 	"machinerun.io/disko"
 	"machinerun.io/disko/mockos"
 	"machinerun.io/disko/partid"
-	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestPV(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"machinerun.io/disko/megaraid"
 	"github.com/urfave/cli/v2"
+	"machinerun.io/disko/megaraid"
 )
 
 //nolint:gochecknoglobals
