@@ -194,7 +194,7 @@ func (ls *linuxLVM) CreatePV(name string) (disko.PV, error) {
 }
 
 func (ls *linuxLVM) DeletePV(pv disko.PV) error {
-	return runCommandSettled("lvm", "pvremove", "--force", pv.Path)
+	return runCommandSettled("lvm", "pvremove", "--force", "--force", "--yes", pv.Path)
 }
 
 func (ls *linuxLVM) HasPV(name string) bool {
