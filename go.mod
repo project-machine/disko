@@ -12,4 +12,5 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/urfave/cli/v2 v2.25.3
 	golang.org/x/sys v0.8.0
+	machinerun.io/disko v0.0.13 // indirect
 )

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/urfave/cli/v2"
+	"machinerun.io/disko/linux"
 	"machinerun.io/disko/megaraid"
 )
 
@@ -69,7 +70,7 @@ func megaraidDiskSummary(c *cli.Context) error {
 		}
 
 		path := ""
-		if bname, err := megaraid.NameByDiskID(d.ID); err == nil {
+		if bname, err := linux.NameByDiskID(mraid.DriverSysfsPath(), d.ID); err == nil {
 			path = "/dev/" + bname
 		}
 

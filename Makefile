@@ -18,7 +18,7 @@ all: build check
 
 build: .build $(CMDS)
 
-.build: $(GO_FILES)
+.build: $(ALL_GO_FILES)
 	go build ./...
 	@touch $@
 
