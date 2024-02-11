@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 	"machinerun.io/disko"
 	"machinerun.io/disko/megaraid"
+	"machinerun.io/disko/smartpqi"
 )
 
 type linuxSystem struct {
@@ -24,6 +25,7 @@ func System() disko.System {
 	return &linuxSystem{
 		raidctrls: []RAIDController{
 			megaraid.CachingStorCli(),
+			smartpqi.ArcConf(),
 		},
 	}
 }

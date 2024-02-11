@@ -6,6 +6,7 @@ type RAIDControllerType string
 
 const (
 	MegaRAIDControllerType RAIDControllerType = "megaraid"
+	SmartPqiControllerType RAIDControllerType = "smartpqi"
 )
 
 type RAIDController interface {
