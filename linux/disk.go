@@ -655,7 +655,7 @@ func addPartitionSet(d disko.Disk, pSet disko.PartitionSet) error {
 			}
 		} else {
 			if err := addPartitionSetGPT(fp, d, pSet); err != nil {
-				return nil
+				return err
 			}
 		}
 
