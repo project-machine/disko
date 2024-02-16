@@ -48,15 +48,50 @@ func parseUdevInfo(out []byte, info *disko.UdevInfo) error {
 		}
 
 		toks = bytes.SplitN(line, []byte(": "), 2)
-		payload = string(toks[1])
 
+		if len(toks) != 2 {
+			log.Printf("parseUdevInfo: ignoring unparsable line %q\n", line)
+			continue
+		}
+
+		payload = string(toks[1])
 		switch toks[0][0] {
 		case 'P':
+			// Device path in /sys/
 			info.SysPath = payload
+		case 'M':
+			// Device name in /sys/ (i.e. the last component of "P:")
+			continue
+		case 'R':
+			// Device number in /sys/ (i.e. the numeric suffix of the last component of "P:")
+			continue
+		case 'U':
+			// Kernel subsystem
+			continue
+		case 'T':
+			// Kernel device type with subsystem
+			continue
+		case 'D':
+			// Kernel device node major/minor
+			continue
+		case 'I':
+			// Network interface index
+			continue
 		case 'N':
+			// Kernel device node name
 			info.Name = payload
+		case 'L':
+			// Device node symlink priority
+			continue
 		case 'S':
+			// Device node symlink
 			info.Symlinks = append(info.Symlinks, strings.Split(payload, " ")...)
+		case 'Q':
+			// Block device sequence number (DISKSEQ)
+			continue
+		case 'V':
+			// Attached driver
+			continue
 		case 'E':
 			kv := strings.SplitN(payload, "=", 2)
 			// use of Unquote is to decode \x20, \x2f and friends.
@@ -68,10 +103,8 @@ func parseUdevInfo(out []byte, info *disko.UdevInfo) error {
 			}
 
 			info.Properties[kv[0]] = strings.TrimSpace(s)
-		case 'L':
-			// a 'devlink priority'. skip for now.
 		default:
-			return fmt.Errorf("error parsing line: (%s)", line)
+			log.Printf("parseUdevInfo: ignoring unknown udevadm info prefix %q in %q\n", toks[0][0], line)
 		}
 	}
 
