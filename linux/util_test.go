@@ -12,6 +12,7 @@ import (
 func TestParseUdevInfo(t *testing.T) {
 	data := []byte(`P: /devices/virtual/block/dm-0
 N: dm-0
+M: dm-0
 S: disk/by-id/dm-name-nvme0n1p6_crypt
 S: disk/by-id/dm-uuid-CRYPT-LUKS1-b174c64e7a714359a8b56b79fb66e92b-nvme0n1p6_crypt
 S: disk/by-uuid/25df9069-80c7-46f4-a47c-305613c2cb6b
@@ -49,6 +50,7 @@ E: DEVNAME=/dev/dm-0
 func TestParseUdevInfo2(t *testing.T) {
 	data := []byte(`P: /devices/pci0000:00/..../block/sda
 N: sda
+M: sda
 S: disk/by-id/scsi-35000c500a0d8963f
 S: disk/by-id/wwn-0x5000c500a0d8963f
 S: disk/by-path/pci-0000:05:00.0-scsi-0:0:8:0
