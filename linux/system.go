@@ -13,16 +13,20 @@ import (
 	"golang.org/x/sys/unix"
 	"machinerun.io/disko"
 	"machinerun.io/disko/megaraid"
+	"machinerun.io/disko/smartpqi"
 )
 
 type linuxSystem struct {
-	megaraid megaraid.MegaRaid
+	raidctrls []RAIDController
 }
 
 // System returns an linux specific implementation of disko.System interface.
 func System() disko.System {
 	return &linuxSystem{
-		megaraid: megaraid.CachingStorCli(),
+		raidctrls: []RAIDController{
+			megaraid.CachingStorCli(),
+			smartpqi.ArcConf(),
+		},
 	}
 }
 
@@ -154,15 +158,22 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 			return disko.Disk{}, err
 		}
 
-		diskType, err = ls.getDiskType(devicePath, udInfo)
-		if err != nil {
-			return disko.Disk{}, err
-		}
-
 		attachType = getAttachType(udInfo)
 
-		if megaraid.IsMegaRaidSysPath(udInfo.Properties["DEVPATH"]) {
-			attachType = disko.RAID
+		for _, ctrl := range ls.raidctrls {
+			if IsSysPathRAID(udInfo.Properties["DEVPATH"], ctrl.DriverSysfsPath()) {
+				// we know this is device is part of a raid, so if we cannot get
+				// disk type we must return an error
+				dType, err := ctrl.GetDiskType(devicePath)
+				if err != nil {
+					return disko.Disk{}, fmt.Errorf("failed to get diskType of %q from RAID controller: %s", devicePath, err)
+				}
+
+				attachType = disko.RAID
+				diskType = dType
+
+				break
+			}
 		}
 
 		ro, err = getDiskReadOnly(name)
@@ -277,22 +288,16 @@ func (ls *linuxSystem) Wipe(d disko.Disk) error {
 	return udevSettle()
 }
 
-func (ls *linuxSystem) getDiskType(path string, udInfo disko.UdevInfo) (disko.DiskType, error) {
-	ctrl, err := ls.megaraid.Query(0)
-	if err == nil {
-		for _, vd := range ctrl.VirtDrives {
-			if vd.Path == path {
-				if ctrl.DriveGroups[vd.DriveGroup].IsSSD() {
-					return disko.SSD, nil
-				}
-
-				return disko.HDD, nil
+func (ls *linuxSystem) GetDiskType(path string, udInfo disko.UdevInfo) (disko.DiskType, error) {
+	for _, ctrl := range ls.raidctrls {
+		if IsSysPathRAID(udInfo.Properties["DEVPATH"], ctrl.DriverSysfsPath()) {
+			dType, err := ctrl.GetDiskType(path)
+			if err != nil {
+				return disko.HDD, fmt.Errorf("failed to get diskType of %q from RAID controller: %s", path, err)
 			}
-		}
-	} else if err != megaraid.ErrNoStorcli && err != megaraid.ErrNoController &&
-		err != megaraid.ErrUnsupported {
-		return disko.HDD, err
-	}
 
+			return dType, nil
+		}
+	}
 	return getDiskType(udInfo)
 }

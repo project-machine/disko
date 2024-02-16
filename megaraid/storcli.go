@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/patrickmn/go-cache"
+	"machinerun.io/disko"
 )
 
 type storCli struct {
@@ -72,6 +73,19 @@ func (sc *storCli) Query(cID int) (Controller, error) {
 	cxVxOut := string(stdout)
 
 	return newController(cID, cxDxOut, cxVxOut)
+}
+
+func (sc *storCli) DriverSysfsPath() string {
+	return SysfsPCIDriversPath
+}
+
+func (sc *storCli) GetDiskType(path string) (disko.DiskType, error) {
+	return disko.HDD, fmt.Errorf("missing controller to run query")
+}
+
+// not implemented in driver layer
+func (sc *storCli) IsSysPathRAID(syspath string) bool {
+	return false
 }
 
 func newController(cID int, cxDxOut string, cxVxOut string) (Controller, error) {
@@ -606,4 +620,32 @@ func (csc *cachingStorCli) Query(cID int) (Controller, error) {
 	csc.cache.Set(cacheName, qresult{ctrl: ctrl, err: err}, cache.DefaultExpiration)
 
 	return ctrl, err
+}
+
+func (csc *cachingStorCli) GetDiskType(path string) (disko.DiskType, error) {
+	ctrl, err := csc.Query(0)
+	if err == nil {
+		for _, vd := range ctrl.VirtDrives {
+			if vd.Path == path {
+				if ctrl.DriveGroups[vd.DriveGroup].IsSSD() {
+					return disko.SSD, nil
+				}
+
+				return disko.HDD, nil
+			}
+		}
+	} else if err != ErrNoStorcli && err != ErrNoController && err != ErrUnsupported {
+		return disko.HDD, err
+	}
+
+	return disko.HDD, fmt.Errorf("cannot determine disk type")
+}
+
+func (csc *cachingStorCli) DriverSysfsPath() string {
+	return csc.mr.DriverSysfsPath()
+}
+
+// not implemented in the driver layer
+func (csc *cachingStorCli) IsSysPathRAID(syspath string) bool {
+	return false
 }

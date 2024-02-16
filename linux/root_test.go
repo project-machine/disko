@@ -18,8 +18,11 @@ import (
 	"machinerun.io/disko/partid"
 )
 
-const MiB = 1024 * 1024
-const GiB = MiB * 1024
+const (
+	MiB          = 1024 * 1024
+	GiB          = MiB * 1024
+	dtLoopPrefix = "detach loop "
+)
 
 // runLog - run command and Printf, useful for debugging errors.
 func runLog(args ...string) {
@@ -112,7 +115,7 @@ func TestRootPartition(t *testing.T) {
 		runLog("losetup", "-a")
 		t.Fatalf("failed loop: %s\n", err)
 	} else {
-		cl.AddF(cleanup, "detach loop "+tmpFile)
+		cl.AddF(cleanup, dtLoopPrefix+tmpFile)
 		loopDev = path
 	}
 
@@ -210,7 +213,7 @@ func TestRootPartitionUpdate(t *testing.T) {
 		runLog("losetup", "-a")
 		t.Fatalf("failed loop: %s\n", err)
 	} else {
-		cl.AddF(cleanup, "detach loop "+tmpFile)
+		cl.AddF(cleanup, dtLoopPrefix+tmpFile)
 		loopDev = path
 	}
 
@@ -297,7 +300,7 @@ func TestRootPartitionDelete(t *testing.T) {
 		runLog("losetup", "-a")
 		t.Fatalf("failed loop: %s\n", err)
 	} else {
-		cl.AddF(cleanup, "detach loop "+tmpFile)
+		cl.AddF(cleanup, dtLoopPrefix+tmpFile)
 		loopDev = path
 	}
 

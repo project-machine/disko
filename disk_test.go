@@ -57,8 +57,8 @@ func TestDiskString(t *testing.T) {
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 		Partitions: disko.PartitionSet{
-			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1},
-			3: {Start: 500 * mib, Last: 600*mib - 1, Number: 3},
+			1: disko.Partition{Start: 3 * mib, Last: 253*mib - 1, Number: 1},
+			3: disko.Partition{Start: 500 * mib, Last: 600*mib - 1, Number: 3},
 		},
 		UdevInfo: disko.UdevInfo{},
 	}
@@ -93,9 +93,9 @@ func TestDiskDetails(t *testing.T) {
 		Type:       disko.HDD,
 		Attachment: disko.ATA,
 		Partitions: disko.PartitionSet{
-			1: {Start: 3 * mib, Last: 253*mib - 1, Number: 1,
+			1: disko.Partition{Start: 3 * mib, Last: 253*mib - 1, Number: 1,
 				Name: "my-name", Type: partid.LinuxLVM},
-			2: {Start: 253 * mib, Last: 400*mib - 1, Number: 2,
+			2: disko.Partition{Start: 253 * mib, Last: 400*mib - 1, Number: 2,
 				Type: disko.PartType(myType)},
 		},
 		UdevInfo: disko.UdevInfo{},
