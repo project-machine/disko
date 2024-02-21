@@ -176,6 +176,14 @@ func (ls *linuxSystem) ScanDisk(devicePath string) (disko.Disk, error) {
 			}
 		}
 
+		// check disk type if it wasn't on raid
+		if attachType != disko.RAID {
+			diskType, err = getDiskType(udInfo)
+			if err != nil {
+				return disko.Disk{}, fmt.Errorf("error while getting disk type: %s", err)
+			}
+		}
+
 		ro, err = getDiskReadOnly(name)
 		if err != nil {
 			return disko.Disk{}, err
