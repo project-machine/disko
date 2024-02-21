@@ -118,6 +118,39 @@ func TestGetAttachType(t *testing.T) {
 		}))
 }
 
+func TestGetDiskType(t *testing.T) {
+	assert := assert.New(t)
+	systemVirtType = virtKvm
+	result, err := getDiskType(disko.UdevInfo{
+		Name:    "vdb",
+		SysPath: "/devices/pci0000:00/0000:00:03.0/virtio1/block/vdb",
+		Properties: map[string]string{
+			"DEVLINKS":         "/dev/disk/by-path/pci-0000:00:03.0 /dev/disk/by-path/virtio-pci-0000:00:03.0 /dev/disk/by-id/virtio-ssd-disk0-ssd",
+			"DEVNAME":          "/dev/vdb",
+			"DEVPATH":          "/devices/pci0000:00/0000:00:03.0/virtio1/block/vdb",
+			"DEVTYPE":          "disk",
+			"DISKSEQ":          "42",
+			"ID_PATH":          "pci-0000:00:03.0",
+			"ID_PATH_TAG":      "pci-0000_00_03_0",
+			"ID_SERIAL":        "ssd-disk0-ssd",
+			"MAJOR":            "253",
+			"MINOR":            "16",
+			"SUBSYSTEM":        "block",
+			"USEC_INITIALIZED": "2422574",
+		},
+		Symlinks: []string{
+			"disk/by-diskseq/42",
+			"disk/by-path/pci-0000:00:03.0",
+			"disk/by-path/virtio-pci-0000:00:03.0",
+			"disk/by-id/virtio-ssd-disk0-ssd",
+		},
+	})
+	if err != nil {
+		t.Errorf("expected err = nil, got %s", err)
+	}
+	assert.Equal(disko.SSD.String(), result.String())
+}
+
 func genTempGptDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 	fpath := path.Join(tmpd, "mydisk")
 
