@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sys/unix"
 	"machinerun.io/disko"
 	"machinerun.io/disko/megaraid"
+	"machinerun.io/disko/mpi3mr"
 	"machinerun.io/disko/smartpqi"
 )
 
@@ -25,6 +26,7 @@ func System() disko.System {
 		raidctrls: []RAIDController{
 			megaraid.CachingStorCli(),
 			smartpqi.ArcConf(),
+			mpi3mr.StorCli2(),
 		},
 	}
 }

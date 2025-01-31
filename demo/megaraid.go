@@ -28,6 +28,11 @@ var megaraidCommands = cli.Command{
 	},
 }
 
+const (
+	HDD = "HDD"
+	SSD = "SSD"
+)
+
 func megaraidDiskSummary(c *cli.Context) error {
 	var err error
 	var ctrlNum = 0
@@ -50,10 +55,10 @@ func megaraidDiskSummary(c *cli.Context) error {
 	data := [][]string{{"Path", "Name", "Type", "State"}}
 
 	for _, vd := range ctrl.VirtDrives {
-		stype := "HDD"
+		stype := HDD
 
 		if ctrl.DriveGroups[vd.DriveGroup].IsSSD() {
-			stype = "SSD"
+			stype = SSD
 		}
 
 		name := vd.RaidName
