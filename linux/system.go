@@ -2,7 +2,6 @@ package linux
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -97,7 +96,7 @@ func getDiskReadOnly(kname string) (bool, error) {
 	}
 
 	syspathReadOnly := syspath + "/ro"
-	content, err := ioutil.ReadFile(syspathReadOnly)
+	content, err := os.ReadFile(syspathReadOnly)
 
 	if err != nil {
 		return false, err

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -155,7 +154,7 @@ func waitForFileSize(devPath string) error {
 }
 
 func getTempDir() (cleaner, string) {
-	p, err := ioutil.TempDir("", "disko_test")
+	p, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		panic(err)
 	}
@@ -164,7 +163,7 @@ func getTempDir() (cleaner, string) {
 }
 
 func getTempFile(size int64) (cleaner, string) {
-	fp, err := ioutil.TempFile("", "disko_test")
+	fp, err := os.CreateTemp("", "disko_test")
 	if err != nil {
 		panic(err)
 	}
@@ -318,9 +317,4 @@ func iSkipOrFail(t *testing.T, checks ...func() error) {
 	}
 
 	t.FailNow()
-}
-
-//nolint:gochecknoinits
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
 }

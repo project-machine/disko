@@ -1,7 +1,6 @@
 package linux
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -158,7 +157,7 @@ func TestFloorEven(t *testing.T) {
 func TestGetFileSize(t *testing.T) {
 	data := "This is my data in the file"
 
-	fp, err := ioutil.TempFile("", "testSize")
+	fp, err := os.CreateTemp("", "testSize")
 	defer os.Remove(fp.Name())
 
 	if err != nil {

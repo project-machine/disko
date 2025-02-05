@@ -2,7 +2,6 @@ package linux
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -88,7 +87,7 @@ func genEmptyDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 		SectorSize: sectorSize512,
 	}
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
+	if err := os.WriteFile(fpath, []byte{}, 0600); err != nil {
 		return disk, fmt.Errorf("Failed to write to a temp file: %s", err)
 	}
 
@@ -107,7 +106,7 @@ func genEmptyDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 func TestCreatePartitionsMBR(t *testing.T) {
 	ast := assert.New(t)
 
-	tmpd, err := ioutil.TempDir("", "disko_test")
+	tmpd, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}
@@ -173,7 +172,7 @@ func TestCreatePartitionsMBR(t *testing.T) {
 func TestCreatePartitions(t *testing.T) {
 	ast := assert.New(t)
 
-	tmpd, err := ioutil.TempDir("", "disko_test")
+	tmpd, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}

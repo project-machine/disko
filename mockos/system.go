@@ -3,14 +3,14 @@ package mockos
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"machinerun.io/disko"
 )
 
 // System returns a mock os implementation of the disk.System interface.
 func System(layout string) disko.System {
-	file, err := ioutil.ReadFile(layout)
+	file, err := os.ReadFile(layout)
 	if err != nil {
 		panic(err)
 	}

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -490,7 +489,7 @@ func handleMount(cpSrc string, exCmd []string, devPath string, subs map[string]s
 
 	defer cleanup() //nolint: errcheck
 
-	if tempDir, err = ioutil.TempDir("", "atx-data-tool."); err != nil {
+	if tempDir, err = os.MkdirTemp("", "atx-data-tool."); err != nil {
 		return err
 	}
 

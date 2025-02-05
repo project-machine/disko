@@ -3,7 +3,6 @@ package linux
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -162,7 +161,7 @@ func genTempGptDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 		Table:      disko.GPT,
 	}
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
+	if err := os.WriteFile(fpath, []byte{}, 0600); err != nil {
 		return disk, fmt.Errorf("Failed to write to a temp file: %s", err)
 	}
 
@@ -195,7 +194,7 @@ func genTempGptDisk(tmpd string, fsize uint64) (disko.Disk, error) {
 }
 
 func TestMyPartition(t *testing.T) {
-	tmpd, err := ioutil.TempDir("", "disko_test")
+	tmpd, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}
@@ -205,7 +204,7 @@ func TestMyPartition(t *testing.T) {
 	fpath := path.Join(tmpd, "mydisk")
 	fsize := uint64(200 * 1024 * 1024)
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
+	if err := os.WriteFile(fpath, []byte{}, 0600); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
 	}
 
@@ -269,7 +268,7 @@ func TestMyPartition(t *testing.T) {
 }
 
 func TestMyPartitionMBR(t *testing.T) {
-	tmpd, err := ioutil.TempDir("", "disko_test")
+	tmpd, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}
@@ -279,7 +278,7 @@ func TestMyPartitionMBR(t *testing.T) {
 	fpath := path.Join(tmpd, "mydisk")
 	fsize := uint64(200 * 1024 * 1024)
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
+	if err := os.WriteFile(fpath, []byte{}, 0600); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
 	}
 
@@ -337,7 +336,7 @@ func TestMyPartitionMBR(t *testing.T) {
 
 //nolint:funlen
 func TestWipeDisk(t *testing.T) {
-	tmpd, err := ioutil.TempDir("", "disko_test")
+	tmpd, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}
@@ -432,7 +431,7 @@ func TestWipeDisk(t *testing.T) {
 }
 
 func TestDeletePartition(t *testing.T) {
-	tmpd, err := ioutil.TempDir("", "disko_test")
+	tmpd, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}
@@ -465,7 +464,7 @@ func TestDeletePartition(t *testing.T) {
 }
 
 func TestUpdatePartition(t *testing.T) {
-	tmpd, err := ioutil.TempDir("", "disko_test")
+	tmpd, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}
@@ -543,7 +542,7 @@ func TestUpdatePartition(t *testing.T) {
 }
 
 func TestBadPartition(t *testing.T) {
-	tmpd, err := ioutil.TempDir("", "disko_test")
+	tmpd, err := os.MkdirTemp("", "disko_test")
 	if err != nil {
 		t.Fatalf("Failed to create tempdir: %s", err)
 	}
@@ -553,7 +552,7 @@ func TestBadPartition(t *testing.T) {
 	fpath := path.Join(tmpd, "mydisk")
 	fsize := uint64(200 * 1024 * 1024)
 
-	if err := ioutil.WriteFile(fpath, []byte{}, 0600); err != nil {
+	if err := os.WriteFile(fpath, []byte{}, 0600); err != nil {
 		t.Fatalf("Failed to write to a temp file: %s", err)
 	}
 
