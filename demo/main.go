@@ -49,6 +49,7 @@ func main() {
 			&diskCommands,
 			&megaraidCommands,
 			&smartpqiCommands,
+			&mpi3mrCommands,
 			&lvmCommands,
 			&miscCommands,
 		},

@@ -44,7 +44,7 @@ type scResultSection struct {
 }
 
 func (sc *storCli) Query(cID int) (Controller, error) {
-	// run /c0/dall show all
+	// run /c0 show all
 	//   - get PDs and VDs
 	// run /c0/vall show all
 	//   - populate VD Properties and Path

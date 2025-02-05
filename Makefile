@@ -6,7 +6,7 @@ LDFLAGS := "${ldflags:+$ldflags }-X main.version=${ver}${suff}"
 BUILD_FLAGS := -ldflags "-X main.version=$(VERSION_FULL)"
 ENV_ROOT := $(shell [ "$$(id -u)" = "0" ] && echo env || echo sudo )
 
-GOLANGCI_VER = v1.56.1
+GOLANGCI_VER = v1.63.4
 GOLANGCI = ./tools/golangci-lint-$(GOLANGCI_VER)
 
 CMDS := demo/demo ptimg/ptimg
@@ -46,7 +46,7 @@ $(GOLANGCI):
 
 lint: .lint
 
-.lint: $(ALL_GO_FILES) $(GOLANGCI) .golangci.yml
+.lint: $(ALL_GO_FILES) $(GOLANGCI)
 	$(GOLANGCI) run ./...
 	@touch $@
 

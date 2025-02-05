@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -91,7 +90,7 @@ func getDiskType(udInfo disko.UdevInfo) (disko.DiskType, error) {
 		return disko.HDD, nil
 	}
 
-	content, err := ioutil.ReadFile(
+	content, err := os.ReadFile(
 		fmt.Sprintf("%s/%s", syspath, "queue/rotational"))
 	if err != nil {
 		return disko.HDD,
@@ -243,7 +242,7 @@ func getDiskNames() ([]string, error) {
 	realDiskKnameRegex := regexp.MustCompile("^((s|v|xv|h)d[a-z]|nvme[0-9]n[0-9]|mmcblk[0-9]+)$")
 	disks := []string{}
 
-	files, err := ioutil.ReadDir("/sys/block")
+	files, err := os.ReadDir("/sys/block")
 	if err != nil {
 		return []string{}, err
 	}
@@ -319,7 +318,7 @@ func GetPartitionsBlockDevice(dev string) (string, error) {
 		return "", err
 	}
 
-	_, err = ioutil.ReadFile(fmt.Sprintf("%s/%s", syspath, "partition"))
+	_, err = os.ReadFile(fmt.Sprintf("%s/%s", syspath, "partition"))
 	if err != nil {
 		// dev is a block device, there is no /sys/class/block/<dev>/partition
 		return path.Base(syspath), nil
@@ -804,7 +803,7 @@ func genPartChangeUEvent(d disko.Disk, pSet disko.PartitionSet) error {
 
 	for _, p := range pSet {
 		uePath := fmt.Sprintf("/sys/class/block/%s/uevent", GetPartitionKname(d.Name, p.Number))
-		if err := ioutil.WriteFile(uePath, []byte("change"), 0600); err != nil && os.IsNotExist(err) {
+		if err := os.WriteFile(uePath, []byte("change"), 0600); err != nil && os.IsNotExist(err) {
 			return fmt.Errorf("%s did not exist: %v", uePath, err)
 		} else if err != nil {
 			return fmt.Errorf("failed to write 'change' to %s: %v", uePath, err)

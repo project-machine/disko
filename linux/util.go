@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -91,6 +90,9 @@ func parseUdevInfo(out []byte, info *disko.UdevInfo) error {
 			continue
 		case 'V':
 			// Attached driver
+			continue
+		case 'J':
+			// Device ID
 			continue
 		case 'E':
 			kv := strings.SplitN(payload, "=", 2)
@@ -220,7 +222,7 @@ func pathExists(d string) bool {
 func getBlockSize(dev string) (uint64, error) {
 	path := path.Join("/sys/block", path.Base(dev), "queue/logical_block_size")
 
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return uint64(0), errors.Wrapf(err, "%s did not exist: is %s a disk?", path, dev)
 	}

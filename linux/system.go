@@ -2,7 +2,6 @@ package linux
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -13,6 +12,7 @@ import (
 	"golang.org/x/sys/unix"
 	"machinerun.io/disko"
 	"machinerun.io/disko/megaraid"
+	"machinerun.io/disko/mpi3mr"
 	"machinerun.io/disko/smartpqi"
 )
 
@@ -26,6 +26,7 @@ func System() disko.System {
 		raidctrls: []RAIDController{
 			megaraid.CachingStorCli(),
 			smartpqi.ArcConf(),
+			mpi3mr.StorCli2(),
 		},
 	}
 }
@@ -97,7 +98,7 @@ func getDiskReadOnly(kname string) (bool, error) {
 	}
 
 	syspathReadOnly := syspath + "/ro"
-	content, err := ioutil.ReadFile(syspathReadOnly)
+	content, err := os.ReadFile(syspathReadOnly)
 
 	if err != nil {
 		return false, err
