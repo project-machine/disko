@@ -91,6 +91,9 @@ func parseUdevInfo(out []byte, info *disko.UdevInfo) error {
 		case 'V':
 			// Attached driver
 			continue
+		case 'J':
+			// Device ID
+			continue
 		case 'E':
 			kv := strings.SplitN(payload, "=", 2)
 			// use of Unquote is to decode \x20, \x2f and friends.
