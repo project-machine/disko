@@ -306,14 +306,19 @@ func (pd *PhysicalDrive) UnmarshalJSON(data []byte) error {
 			case int:
 				pd.DG = v.(int)
 			case string:
-				if v == "-" {
-					pd.DG = -1
-				} else {
+				switch v {
+				case "-": // UConfigured Good
+					pd.DG = DriveDGUConf
+				case "F": // Foreign Config
+					pd.DG = DriveDGForeign
+				default:
 					i, err := strconv.Atoi(v.(string))
 					if err != nil {
-						return err
+						fmt.Printf("warning: unknown 'DG' value %q, setting DG=%d", v, DriveDGUnknown)
+						pd.DG = DriveDGUnknown
+					} else {
+						pd.DG = i
 					}
-					pd.DG = i
 				}
 			}
 		case "Size":
@@ -522,10 +527,16 @@ func StorCli2() Mpi3mr {
 	return &storCli2{}
 }
 
-const noStorCli2RC = 127
+const (
+	noStorCli2RC = 127
 
-// when successful storcli2 show returns rc=6  ¯\_(ツ)_/¯
-const StorCli2ShowRC = 6
+	// when successful storcli2 show returns rc=6  ¯\_(ツ)_/¯
+	StorCli2ShowRC = 6
+
+	DriveDGUConf   = -1
+	DriveDGForeign = -2
+	DriveDGUnknown = -99
+)
 
 func (sc *storCli2) Query(cID int) (Controller, error) {
 	// run /c0 show all nolog J
