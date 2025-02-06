@@ -300,107 +300,6 @@ var testc0VAllShowAllJOut = `
   ]
 }
 `
-
-/*
-var testParseVirtPropObj = VirtualDrives{
-	VDInfo: VirtualDrive{
-		DGVD:         "0/1",
-		Type:         "RAID0",
-		State:        "Optl",
-		Access:       "RW",
-		CurrentCache: "NR,WB",
-		DefaultCache: "NR,WB",
-		Size:         "893.137 GiB",
-		Name:         "",
-	},
-	PhysicalDrives: []PhysicalDrive{
-		{
-			EIDSlot:    "322:2",
-			PID:        312,
-			State:      "Conf",
-			Status:     "Online",
-			DG:         0,
-			Size:       "893.137 GiB",
-			Interface:  "SATA",
-			Medium:     "SSD",
-			SEDType:    "-",
-			SectorSize: "512B",
-			Model:      "SAMSUNG MZ7L3960HCJR-00AK1",
-			SP:         "U",
-			LUNSCount:  1,
-			AltEID:     "-",
-		},
-	},
-	VDProperties: VirtualDriveProperties{
-		StripSize:                    "64 KiB",
-		BlockSize:                    4096,
-		NumberOfBlocks:               234130688,
-		SpanDepth:                    1,
-		NumberOfDrives:               1,
-		DriveWriteCachePolicy:        "Default",
-		DefaultPowerSavePolicy:       "Default",
-		CurrentPowerSavePolicy:       "Default",
-		AccessPolicyStatus:           "VD has desired access",
-		AutoBGI:                      "Off",
-		Secured:                      "No",
-		InitState:                    "No Init",
-		Consistent:                   "Yes",
-		Morphing:                     "No",
-		CachePreserved:               "No",
-		BadBlockExists:               "No",
-		VDReadyForOSRequests:         "Yes",
-		ReachedLDBBMFailureThreshold: "No",
-		SupportedEraseTypes:          "Simple, Normal, Thorough",
-		ExposedToOS:                  "Yes",
-		CreationTimeLocalTimeString:  "2025/01/29 22:07:51",
-		DefaultCachebypassMode:       "Cachebypass Not Performed For Any IOs",
-		CurrentCachebypassMode:       "Cachebypass Not Performed For Any IOs",
-		SCSINAAId:                    "62cf89bd43a7af80679aa6b751349581",
-		OSDriveName:                  "/dev/sdg",
-		CurrentUnmapStatus:           "No",
-		CurrentWriteSameUnmapStatus:  "No",
-		LUNSCountUsedPerPD:           1,
-		DataFormatForIO:              "None",
-		SerialNumber:                 "0081953451b7a69a6780afa743bd89cf",
-	},
-}
-var testParsePhysicalDrivesObj = PhysicalDrive{
-	EIDSlot:    "322:2",
-	PID:        312,
-	State:      "Conf",
-	Status:     "Online",
-	DG:         0,
-	Size:       "893.137 GiB",
-	Interface:  "SATA",
-	Medium:     "SSD",
-	SEDType:    "-",
-	SectorSize: "512B",
-	Model:      "SAMSUNG MZ7L3960HCJR-00AK1",
-	SP:         "U",
-	LUNSCount:  1,
-	AltEID:     "-",
-}
-
-func TestStorCli2ParseVirtProperties(t *testing.T) {
-	ctrlID := 0
-	vdMap, err := parseVirtProperties(ctrlID, []byte(testc0VAllShowAllJOut))
-	if err != nil {
-		t.Fatalf("Error parsing virt properties: %s", err)
-	}
-
-	if len(vdMap) != 1 {
-		t.Fatalf("expected 1 virtual drive, got %d", len(vdMap))
-	}
-
-	want := testParseVirtPropObj.VDProperties
-	for _, got := range vdMap {
-		if diff := cmp.Diff(got, want); diff != "" {
-			t.Errorf("got:\n%+v\nwant:\n+%v", got, want)
-		}
-	}
-}
-*/
-
 var expectedControllerBytes = `
 {
   "Controller": {
@@ -515,4 +414,35 @@ func TestStorCli2NewController(t *testing.T) {
 	if diff := cmp.Diff(p, want); diff != "" {
 		t.Errorf("got:\n%+v\nwant:\n+%v", got, want)
 	}
+}
+
+var pdForeignData = `
+{
+  "EID:Slt": "322:5",
+  "PID": 315,
+  "State": "UConf",
+  "Status": "Good",
+  "DG": "F",
+  "Size": "1.090 TiB",
+  "Intf": "SAS",
+  "Med": "HDD",
+  "SED_Type": "-",
+  "SeSz": "512B",
+  "Model": "AL15SEB120N     ",
+  "Sp": "U",
+  "LU/NS Count": 1,
+  "Alt-EID": "-"
+}
+`
+
+func TestStorCli2ParsePhysicalDriveForeign(t *testing.T) {
+	pd := PhysicalDrive{}
+	if err := json.Unmarshal([]byte(pdForeignData), &pd); err != nil {
+		t.Fatalf("failed to unmarshal PhysicalDrive with Foreign 'DG': %v", err)
+	}
+
+	if pd.DG != DriveDGForeign {
+		t.Fatalf("expected DG %d, got DG %d", DriveDGForeign, pd.DG)
+	}
+
 }
