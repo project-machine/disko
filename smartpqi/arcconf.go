@@ -259,7 +259,8 @@ func parsePhysicalDevices(output string) ([]PhysicalDevice, error) {
 		}
 
 		pd := PhysicalDevice{
-			ID: pdID,
+			ID:      pdID,
+			ArrayID: -1, // sentinel: not assigned to any array; set below if "Array" key is present
 		}
 
 		for _, lineRaw := range strings.Split(deviceLines[1], "\n") {
@@ -299,6 +300,12 @@ func parsePhysicalDevices(output string) ([]PhysicalDevice, error) {
 
 				bSize, err := parseBlockSize(dToks[0])
 				if err != nil {
+					// Failed drives report "Block Size : 0 Bytes"; arcconf cannot
+					// query the drive so the value is meaningless. Accept it only
+					// for devices the controller already marks as failed.
+					if dToks[0] == "0" && pd.Availability == "Failed" {
+						break
+					}
 					return []PhysicalDevice{}, fmt.Errorf("failed to parse Block Size from token %q: %s", dToks[0], err)
 				}
 
@@ -308,6 +315,9 @@ func parsePhysicalDevices(output string) ([]PhysicalDevice, error) {
 
 				bSize, err := parseBlockSize(dToks[0])
 				if err != nil {
+					if dToks[0] == "0" && pd.Availability == "Failed" {
+						break
+					}
 					return []PhysicalDevice{}, fmt.Errorf("failed to parse Physical Block Size from token %q: %s", dToks[0], err)
 				}
 
@@ -638,7 +648,9 @@ func newController(cID int, arcGetConfigOut string) (Controller, error) {
 		ctrl.LogicalDrives[lDev.ID] = &lDev
 		for idx := range pDevs {
 			pDev := pDevs[idx]
-			if lDev.ArrayID == pDev.ArrayID {
+			// Skip unassigned drives (ArrayID sentinel -1) so they don't
+			// pollute the LD device list and corrupt IsSSD() results.
+			if pDev.ArrayID >= 0 && lDev.ArrayID == pDev.ArrayID {
 				lDev.Devices = append(lDev.Devices, &pDev)
 			}
 		}

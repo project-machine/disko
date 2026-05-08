@@ -868,6 +868,9 @@ func TestParseBlockSize(t *testing.T) {
 		{"4096", 4096, false},
 		{"4K", 4096, false},
 		{"4k", 4096, false},
+		// "0" is rejected by parseBlockSize; the call site accepts it only for
+		// failed devices.
+		{"0", 0, true},
 		{"", 0, true},
 		{"abc", 0, true},
 		{"1M", 0, true},
@@ -1170,6 +1173,74 @@ func TestSmartPqiPhysicalDeviceBadFormats(t *testing.T) {
 		if !strings.Contains(err.Error(), testCase.expectedErr) {
 			t.Errorf("expected '%s' message, got %q index %d", testCase.expectedErr, err, idx)
 		}
+	}
+}
+
+// Failed drives report "Block Size : 0 Bytes"; arcconf cannot query the drive.
+// Parsing must succeed and leave BlockSize at 0 for a device with State=Failed.
+func TestParsePhysicalDeviceBlockSizeZeroFailed(t *testing.T) {
+	input := `
+Physical Device information
+----------------------------------------------------------------------
+   Channel #0:
+      Device #0
+         Device is a Hard drive
+         State                                : Failed
+         Block Size                           : 0
+         Physical Block Size                  : 0
+         Reported Channel,Device(T:L)         : 0,0(0:0)
+         Array                                : 0
+         Vendor                               : Not Available
+         Model                                : Not Available
+         Firmware                             : Not Available
+         Serial number                        : Not Available
+         Total Size                           : 0 MB
+         Write Cache                          : Unknown
+         SSD                                  : No
+`
+	pDevs, err := parsePhysicalDevices(input)
+	if err != nil {
+		t.Fatalf("unexpected error parsing failed physical device with Block Size 0: %s", err)
+	}
+	if len(pDevs) != 1 {
+		t.Fatalf("expected 1 physical device, got %d", len(pDevs))
+	}
+	if pDevs[0].BlockSize != 0 {
+		t.Errorf("expected BlockSize 0, got %d", pDevs[0].BlockSize)
+	}
+	if pDevs[0].PhysicalBlockSize != 0 {
+		t.Errorf("expected PhysicalBlockSize 0, got %d", pDevs[0].PhysicalBlockSize)
+	}
+}
+
+// An Online device reporting "Block Size : 0" is unexpected and should still
+// be treated as a parse error.
+func TestParsePhysicalDeviceBlockSizeZeroOnlineErrors(t *testing.T) {
+	input := `
+Physical Device information
+----------------------------------------------------------------------
+   Channel #0:
+      Device #0
+         Device is a Hard drive
+         State                                : Online
+         Block Size                           : 0
+         Physical Block Size                  : 512
+         Reported Channel,Device(T:L)         : 0,0(0:0)
+         Array                                : 0
+         Vendor                               : TOSHIBA
+         Model                                : AL15SEB060N
+         Firmware                             : 5703
+         Serial number                        : DEADBEEF0001
+         Total Size                           : 572325 MB
+         Write Cache                          : Disabled (write-through)
+         SSD                                  : No
+`
+	_, err := parsePhysicalDevices(input)
+	if err == nil {
+		t.Fatal("expected error for Online device with Block Size 0, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to parse Block Size") {
+		t.Errorf("expected 'failed to parse Block Size' in error, got %q", err)
 	}
 }
 
@@ -1737,4 +1808,193 @@ func TestIsSoftArcconfErr(t *testing.T) {
 				"isSoftArcconfErr(%v)", tc.err)
 		})
 	}
+}
+
+// arcConfGetConfigDegradedRAID5 is a synthetic fixture that mimics a degraded
+// RAID5 configuration. It exercises two problems in the same output:
+//   - Device #2 and #6 report "Block Size : 0 Bytes" (failed drives)
+//   - Device #0 and #7 are unassigned (no "Array :" field); they must NOT be
+//     linked to LD 0 so that IsSSD() is not corrupted by unrelated HDD drives.
+var arcConfGetConfigDegradedRAID5 = `
+Controllers found: 1
+----------------------------------------------------------------------
+Controller information
+----------------------------------------------------------------------
+   Controller Status                                     : Optimal
+   Controller Mode                                       : Mixed
+   Controller Model                                      : Cisco 24G TriMode M1 RAID 4GB FBWC 16D UCSC-RAID-M1L16
+   Driver Name                                           : smartpqi
+
+
+----------------------------------------------------------------------
+Array Information
+----------------------------------------------------------------------
+Array Number 0
+   Name                                                  : A
+   Status                                                : Has Failed Physical Drive
+   Interface                                             : SAS SSD
+   Total Size                                            : 18314162 MB
+   Block Size                                            : 512 Bytes
+   Type                                                  : Data
+
+
+--------------------------------------------------------
+Logical device information
+--------------------------------------------------------
+Logical Device number 0
+   Logical Device name                                   : RAID5_123456
+   Disk Name                                             : /dev/sdc (Disk0) (Bus: 1, Target: 0, Lun: 0)
+   Block Size of member drives                           : 512 Bytes
+   Array                                                 : 0
+   RAID level                                            : 5
+   Status of Logical Device                              : Interim Recovery
+   Parity Initialization Status                          : Completed
+   Size                                                  : 15258789 MB
+   Interface Type                                        : SAS SSD
+   Consistency Check Status                              : Not Running
+   Last Consistency Check Completion Time                : Thu Aug 28 2025 06:46:07 UTC
+   Last Consistency Check Duration                       : 2 hours 40 minutes 37 seconds
+
+
+----------------------------------------------------------------------
+Physical Device information
+----------------------------------------------------------------------
+   Channel #0:
+      Device #0
+         Device is a Hard drive
+         State                                           : Ready
+         Block Size                                      : 512 Bytes
+         Physical Block Size                             : 4K Bytes
+         Negotiated Transfer Speed                       : SATA 6.0 Gb/s
+         Reported Channel,Device(T:L)                    : 0,0(0:0)
+         Vendor                                          : ATA
+         Model                                           : TestSSD-1T-A
+         Firmware                                        : F0000
+         Serial number                                   : TSTSER0000001
+         Total Size                                      : 915715 MB
+         Write Cache                                     : Enabled (write-back)
+         SSD                                             : Yes
+
+      Device #1
+         Device is a Hard drive
+         State                                           : Online
+         Block Size                                      : 512 Bytes
+         Physical Block Size                             : 4K Bytes
+         Negotiated Transfer Speed                       : SAS 22.5 Gb/s
+         Reported Channel,Device(T:L)                    : 0,1(1:0)
+         Array                                           : 0
+         Vendor                                          : KIOXIA
+         Model                                           : TestSSD-3T-B
+         Firmware                                        : 0001
+         Serial number                                   : TSTSER0000002
+         Total Size                                      : 3052360 MB
+         Write Cache                                     : Disabled (write-through)
+         SSD                                             : Yes
+
+      Device #2
+         Device is a Hard drive
+         State                                           : Failed
+         Block Size                                      : 0 Bytes
+         Physical Block Size                             : 0 Bytes
+         Reported Channel,Device(T:L)                    : 0,2(2:0)
+         Array                                           : 0
+         Vendor                                          : Not Available
+         Model                                           : Not Available
+         Firmware                                        : Not Available
+         Serial number                                   : Not Available
+         Total Size                                      : 0 MB
+         Write Cache                                     : Unknown
+         SSD                                             : No
+
+      Device #3
+         Device is a Hard drive
+         State                                           : Online
+         Block Size                                      : 512 Bytes
+         Physical Block Size                             : 4K Bytes
+         Negotiated Transfer Speed                       : SAS 22.5 Gb/s
+         Reported Channel,Device(T:L)                    : 0,3(3:0)
+         Array                                           : 0
+         Vendor                                          : KIOXIA
+         Model                                           : TestSSD-3T-B
+         Firmware                                        : 0001
+         Serial number                                   : TSTSER0000003
+         Total Size                                      : 3052360 MB
+         Write Cache                                     : Disabled (write-through)
+         SSD                                             : Yes
+
+      Device #7
+         Device is a Hard drive
+         State                                           : Ready
+         Block Size                                      : 4K Bytes
+         Physical Block Size                             : 4K Bytes
+         Negotiated Transfer Speed                       : SAS 12.0 Gb/s
+         Reported Channel,Device(T:L)                    : 0,7(7:0)
+         Vendor                                          : TOSHIBA
+         Model                                           : TestHDD-2T-A
+         Firmware                                        : 5000
+         Serial number                                   : TSTSER0000007
+         Total Size                                      : 2289272 MB
+         Write Cache                                     : Disabled (write-through)
+         SSD                                             : No
+
+----------------------------------------------------------------------
+maxCache information
+----------------------------------------------------------------------
+   No maxCache Array found
+
+
+Command completed successfully.
+`
+
+// TestNewControllerDegradedRAID5 verifies that:
+//  1. Failed drives with "Block Size : 0" do not cause a parse error.
+//  2. Unassigned drives (no "Array :" field) are not linked to any logical
+//     drive, so IsSSD() correctly reflects only the drives in the array.
+func TestNewControllerDegradedRAID5(t *testing.T) {
+	ctrl, err := newController(1, arcConfGetConfigDegradedRAID5)
+	require.NoError(t, err, "newController must not fail on degraded RAID5 output")
+
+	// One logical drive.
+	require.Len(t, ctrl.LogicalDrives, 1)
+	ld := ctrl.LogicalDrives[0]
+	require.NotNil(t, ld)
+	assert.Equal(t, "/dev/sdc", ld.DiskName)
+	assert.Equal(t, "5", ld.RAIDLevel)
+
+	// The LD must only contain drives explicitly assigned to Array 0:
+	// Device #1 (SSD), Device #2 (failed HDD), Device #3 (SSD).
+	// Unassigned Device #0 (SSD) and Device #7 (HDD) must NOT be linked.
+	assert.Len(t, ld.Devices, 3, "only Array-0 drives should be linked to LD 0")
+
+	linkedIDs := make(map[int]bool)
+	for _, pd := range ld.Devices {
+		linkedIDs[pd.ID] = true
+	}
+	assert.True(t, linkedIDs[1], "Device #1 must be linked")
+	assert.True(t, linkedIDs[2], "Device #2 (failed) must be linked")
+	assert.True(t, linkedIDs[3], "Device #3 must be linked")
+	assert.False(t, linkedIDs[0], "unassigned Device #0 must not be linked")
+	assert.False(t, linkedIDs[7], "unassigned Device #7 must not be linked")
+
+	// IsSSD() must be false because the failed drive (Device #2) reports HDD.
+	assert.False(t, ld.IsSSD(), "IsSSD must be false: failed placeholder is HDD")
+
+	// Physical drive inventory: all 5 devices should be present.
+	assert.Len(t, ctrl.PhysicalDrives, 5)
+
+	// Failed drive's BlockSize parsed as 0 — no error, field is 0.
+	pd2 := ctrl.PhysicalDrives[2]
+	require.NotNil(t, pd2)
+	assert.Equal(t, 0, pd2.BlockSize)
+	assert.Equal(t, 0, pd2.PhysicalBlockSize)
+	assert.Equal(t, "Failed", pd2.Availability)
+
+	// Unassigned drives have ArrayID -1.
+	pd0 := ctrl.PhysicalDrives[0]
+	require.NotNil(t, pd0)
+	assert.Equal(t, -1, pd0.ArrayID, "unassigned drive ArrayID must be -1")
+
+	pd7 := ctrl.PhysicalDrives[7]
+	require.NotNil(t, pd7)
+	assert.Equal(t, -1, pd7.ArrayID, "unassigned drive ArrayID must be -1")
 }
